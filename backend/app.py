@@ -32,10 +32,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "ssd-team-22-project")
 login_manager = LoginManager(app)
 login_manager.login_view = "login"  
 
-project_root = os.path.dirname(os.path.abspath(__file__))
-html_folder = os.path.normpath(os.path.join(project_root, "../html"))
-
-app = Flask(__name__, template_folder=html_folder, static_folder=html_folder, static_url_path="")
+app = Flask(__name__, template_folder=html_folder, static_folder=static_folder, static_url_path="/static")
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "ssd-team-22-project")
 
 # Need to hide this somehow someway maybe in another db
@@ -45,7 +42,7 @@ def get_db():
         host=os.getenv("DB_HOST", "localhost"),
         user=os.getenv("DB_USER", "root"),
         # Change pw to what u set ur localhost pw
-        password=os.getenv("DB_PASSWORD", ""),
+        password=os.getenv("DB_PASSWORD", "admin"),
         # Change to whatever you call ur schema
         database=os.getenv("DB_NAME", "rbac"),
         cursorclass=pymysql.cursors.DictCursor
@@ -90,7 +87,7 @@ def load_user(user_id):
 # Home page — serves html/index.html
 @app.route("/")
 def serve_index():
-    return send_from_directory(app.static_folder, "index.html")
+    return render_template("index.html")
 
 # Run this to test ur db connection
 @app.route("/test-db")
