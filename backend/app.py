@@ -20,53 +20,54 @@ from flask_login import (
 )
 
 # ───────────────────────────────────────────────────────────────────────────────
-# 1. STATIC / TEMPLATE FOLDER CONFIGURATION
+# 1. DIRECTORY CONFIGURATION
 #
-# We want:
-#   •  to serve index.html (and any other static assets) from ../html
-#   •  to load Jinja templates (register.html, login.html, dashboard.html, etc.) from ../html
-#
-# “project_root” is the directory containing this app.py (i.e. backend/).
-# “html_folder” points to the sibling "html" directory.
-project_root = os.path.dirname(os.path.abspath(__file__))
-html_folder  = os.path.normpath(os.path.join(project_root, "../html"))
+#   └── html/   → Jinja templates (index.html, login.html, etc.)
+#   └── static/ → Static assets (CSS, JS, images)
+# ------------------------------------------------------------------------------
+project_root   = os.path.dirname(os.path.abspath(__file__))
+html_folder    = os.path.join(project_root, "html")
+static_folder  = os.path.join(project_root, "static")
 
+# ───────────────────────────────────────────────────────────────────────────────
+# 2. CREATE FLASK APP WITH CUSTOM STATIC/TEMPLATE PATHS
+# ------------------------------------------------------------------------------
 app = Flask(
     __name__,
-    template_folder=html_folder,   # Jinja templates live in ../html
-    static_folder=html_folder,     # any static file (index.html, CSS, JS, etc.) also in ../html
-    static_url_path=""             # serve those files at “/…”
+    template_folder=html_folder,
+    static_folder=static_folder,
+    static_url_path="/static"  # Files are accessed at /static/...
 )
 
 # ───────────────────────────────────────────────────────────────────────────────
-# 2. SECRET KEY & DATABASE CONFIGURATION
-#
-# We'll read DATABASE_URL from env (provided by Docker‐Compose), or fallback to SQLite.
+# 3. SECRET KEY & DATABASE CONFIGURATION
+# ------------------------------------------------------------------------------
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "ssd-team-22-project")
 
-database_url = os.getenv(
+# Use env DATABASE_URL (e.g. in Docker), fallback to local SQLite for dev
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
     "DATABASE_URL",
-    "sqlite:///users.db"   # fallback if you run locally without Docker
+    "sqlite:///users.db"
 )
-app.config["SQLALCHEMY_DATABASE_URI"]        = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # ───────────────────────────────────────────────────────────────────────────────
-# 3. SET UP SQLALCHEMY & FLASK-LOGIN
+# 4. SET UP DATABASE AND LOGIN MANAGER
+# ------------------------------------------------------------------------------
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
-login_manager.login_view = "login"
-
+login_manager.login_view = "login"  # redirects here if @login_required fails
 
 # ───────────────────────────────────────────────────────────────────────────────
-# 4. USER MODEL (with “role”)
+# 5. USER MODEL: includes role & password hashing methods
+# ------------------------------------------------------------------------------
 class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     id            = db.Column(db.Integer, primary_key=True)
     username      = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role          = db.Column(db.String(20), nullable=False)  # must be 'admin' / 'doctor' / 'user'
+    role          = db.Column(db.String(20), nullable=False)  # 'admin' / 'doctor' / 'user'
 
     def set_password(self, plain_password):
         self.password_hash = generate_password_hash(plain_password)
@@ -77,33 +78,26 @@ class User(UserMixin, db.Model):
     def get_id(self):
         return str(self.id)
 
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-
 # ───────────────────────────────────────────────────────────────────────────────
-# 5. AUTO-CREATE TABLES (only the first time; for production, use migrations)
+# 6. INITIALISE DB TABLES (for dev convenience)
+# ------------------------------------------------------------------------------
 with app.app_context():
     db.create_all()
 
-
 # ───────────────────────────────────────────────────────────────────────────────
-# 6. ROUTES
-#
-#  6a) Serve index.html at “/”
-#  6b) /register, /login, /dashboard, /logout
+# 7. ROUTES
+# ------------------------------------------------------------------------------
 
+# Home page — serves html/index.html
 @app.route("/")
 def serve_index():
-    """
-    This will serve html/index.html (and any other file in ../html)
-    if you go to http://<host>:<port>/
-    """
-    return send_from_directory(app.static_folder, "index.html")
+    return render_template("index.html")
 
-
+# ───── Registration ─────
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
@@ -114,40 +108,38 @@ def register():
         password = request.form.get("password", "")
         role     = request.form.get("role", "")
 
-        # 1) Basic validation: all fields required
+        # 1) Validate required fields
         if not username or not password or not role:
             flash("All fields are required.", "error")
             return render_template("register.html")
 
-        # 2) Enforce allowed roles
+        # 2) Validate role
         if role not in ["admin", "doctor", "user"]:
             flash("Invalid role selected.", "error")
             return render_template("register.html")
 
-        # 3) Check username uniqueness
+        # 3) Ensure username is unique
         if User.query.filter_by(username=username).first():
             flash(f'Username "{username}" is already taken.', "error")
             return render_template("register.html")
 
-        # 4) Create the new user, hash their password
+        # 4) Create user
         new_user = User(username=username, role=role)
         new_user.set_password(password)
 
         try:
             db.session.add(new_user)
             db.session.commit()
-        except Exception as e:
+            flash("Registration successful! Please log in.", "success")
+            return redirect(url_for("login"))
+        except Exception:
             db.session.rollback()
             flash("There was an error creating your account. Please try again.", "error")
             return render_template("register.html")
 
-        flash("Registration successful! Please log in.", "success")
-        return redirect(url_for("login"))
-
-    # If GET, just show the registration form
     return render_template("register.html")
 
-
+# ───── Login ─────
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
@@ -165,29 +157,24 @@ def login():
             flash("Invalid username or password.", "error")
             return render_template("login.html")
 
-    # If GET, show login form
     return render_template("login.html")
 
-
+# ───── Dashboard ─────
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    """
-    Renders dashboard.html, passing in current_user.
-    The template can check current_user.role to show role‐specific content.
-    """
     return render_template("dashboard.html", user=current_user)
 
-
+# ───── Logout ─────
 @app.route("/logout")
 @login_required
 def logout():
     logout_user()
     return redirect(url_for("login"))
 
-
 # ───────────────────────────────────────────────────────────────────────────────
+# 8. RUN FLASK SERVER (in dev mode)
+# ------------------------------------------------------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    # Debug=True for local development only; in production set False or remove.
     app.run(debug=True, host="0.0.0.0", port=port)
