@@ -14,12 +14,29 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: your_root_password
       MYSQL_DATABASE: medivault_db
-      MYSQL_USER: medivault_user
-      MYSQL_PASSWORD: medivault_password
+      MYSQL_USER: root
+      MYSQL_PASSWORD: MediVault123!
     ports:
-      - "3306:3306"
+      - "3307:3307"
     volumes:
       - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
+
+flask_app:
+    build: .
+    container_name: flask_app
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      MYSQL_HOST: mysql_db
+      MYSQL_DATABASE: medivault_db
+      MYSQL_USER: medivault_user
+      MYSQL_PASSWORD: MediVault123!
+    depends_on:
+      - mysql_db
 
 volumes:
   mysql_data:
