@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register Account</title>
+    <link rel="stylesheet" href="/static/styles/register.css" />
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <a href="/" style="text-decoration: none; color: white;">
+                    <h1>MediVault</h1>
+                </a>
+            </div>
+            <nav>
+                <a href="/register">Register</a>
+                <a href="/login">Login</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <h2>Create an Account</h2>
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            <ul class="flash-messages">
+              {% for msg in messages %}
+                <li>{{ msg }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('register') }}" method="post">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required />
+
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required />
+
+          <label for="role">Select Role</label>
+          <select id="role" name="role" required>
+            <option value="">— Choose a role —</option>
+            <option value="admin">Administrator</option>
+            <option value="doctor">Doctor</option>
+            <option value="user">Normal User</option>
+          </select>
+
+          <button type="submit">Register</button>
+        </form>
+
+        <p>Already have an account? <a href="{{ url_for('login') }}">Log in here</a>.</p>
+    </main>
+
+    <footer>
+        &copy; 2025 MediVault. All rights reserved.
+    </footer>
+</body>
+</html>
