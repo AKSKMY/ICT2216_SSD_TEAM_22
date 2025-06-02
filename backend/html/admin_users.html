@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Manage Users - MediVault{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mb-4">Manage Users</h1>
+
+  {% for role, users in grouped_users.items() %}
+    <h3 class="mt-4 text-primary">{{ role }}s</h3>
+    {% if users %}
+      <div class="table-responsive">
+        <table class="table table-bordered table-striped">
+          <thead class="table-light">
+            <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Email</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+              <tr>
+                <td>{{ user.user_Id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted">No {{ role.lower() }} accounts found.</p>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}
