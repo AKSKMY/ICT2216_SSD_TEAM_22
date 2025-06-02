@@ -208,6 +208,33 @@ def login():
 def dashboard():
     return render_template("dashboard.html", user=current_user)
 
+# admin - manage users
+@app.route("/admin/users")
+@login_required
+def admin_users():
+    if current_user.role != 'Admin':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT u.user_Id, u.username, u.email, r.role_name AS role
+            FROM user u
+            JOIN userrole ur ON u.user_Id = ur.user_Id
+            JOIN role r ON ur.role_Id = r.role_Id
+            WHERE r.role_name IN ('Patient', 'Doctor', 'Nurse')
+            ORDER BY r.role_name, u.username
+        """)
+        rows = cur.fetchall()
+
+    # Group users by role
+    grouped = {"Patient": [], "Doctor": [], "Nurse": []}
+    for user in rows:
+        grouped[user["role"]].append(user)
+
+    return render_template("admin_users.html", grouped_users=grouped)
+
 # logout
 @app.route("/logout")
 @login_required
