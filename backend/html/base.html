@@ -23,7 +23,7 @@
         {% if current_user.is_authenticated %}
             {% if current_user.role == 'Admin' %}
             <a href="/admin/settings" class="text-white text-decoration-none me-3">Settings</a>
-            <a href="/admin/users" class="text-white text-decoration-none me-3">Users</a>
+            <a href="/admin/users" class="text-white text-decoration-none me-3">Manage Users</a>
 
             {% elif current_user.role == 'Doctor' %}
             <a href="/doctor/patients" class="text-white text-decoration-none me-3">My Patients</a>

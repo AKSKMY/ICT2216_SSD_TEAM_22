@@ -94,6 +94,25 @@ def inject_user():
     return dict(current_user=current_user)
 
 # ───────────────────────────────────────────────────────
+# Functions
+# ───────────────────────────────────────────────────────
+
+def has_permission(user_id, permission_name):
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT 1
+            FROM user u
+            JOIN userrole ur ON u.user_Id = ur.user_Id
+            JOIN rolepermission rp ON ur.role_Id = rp.role_Id
+            JOIN permission p ON rp.permission_Id = p.permission_Id
+            WHERE u.user_Id = %s AND p.permission_name = %s
+            LIMIT 1
+        """, (user_id, permission_name))
+        return cur.fetchone() is not None
+
+
+# ───────────────────────────────────────────────────────
 # ROUTES
 # ───────────────────────────────────────────────────────
 
@@ -208,7 +227,7 @@ def login():
 def dashboard():
     return render_template("dashboard.html", user=current_user)
 
-# admin - manage users
+# Admin - View all non-admin users in a single table
 @app.route("/admin/users")
 @login_required
 def admin_users():
@@ -226,14 +245,65 @@ def admin_users():
             WHERE r.role_name IN ('Patient', 'Doctor', 'Nurse')
             ORDER BY r.role_name, u.username
         """)
-        rows = cur.fetchall()
+        users = cur.fetchall()
 
-    # Group users by role
-    grouped = {"Patient": [], "Doctor": [], "Nurse": []}
-    for user in rows:
-        grouped[user["role"]].append(user)
+    return render_template("admin_users.html", users=users)
 
-    return render_template("admin_users.html", grouped_users=grouped)
+# Admin - Edit User
+@app.route("/admin/editUser/<int:user_id>", methods=["GET", "POST"])
+@login_required
+def edit_user(user_id):
+    if current_user.role != 'Admin' or not has_permission(current_user.id, "Manage Users"):
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        if request.method == "POST":
+            username = request.form.get("username", "").strip()
+            email = request.form.get("email", "").strip()
+            cur.execute("UPDATE user SET username = %s, email = %s WHERE user_Id = %s",
+                        (username, email, user_id))
+            conn.commit()
+            flash("User updated successfully.", "success")
+            return redirect(url_for("admin_users"))
+
+        # GET request: Fetch user details
+        cur.execute("SELECT username, email FROM user WHERE user_Id = %s", (user_id,))
+        user = cur.fetchone()
+    conn.close()
+
+    if not user:
+        flash("User not found.", "error")
+        return redirect(url_for("admin_users"))
+
+    return render_template("admin_editUsers.html", user=user, user_id=user_id)
+
+# Admin - Delete User
+@app.route("/admin/deleteUser/<int:user_id>", methods=["POST"])
+@login_required
+def delete_user(user_id):
+    if current_user.role != 'Admin' or not has_permission(current_user.id, "Manage Users"):
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # Delete from userrole first due to FK
+            cur.execute("DELETE FROM userrole WHERE user_Id = %s", (user_id,))
+            cur.execute("DELETE FROM user WHERE user_Id = %s", (user_id,))
+        conn.commit()
+        flash("User deleted successfully.", "success")
+    except Exception as e:
+        conn.rollback()
+        flash("Failed to delete user.", "error")
+        print("Delete error:", e)
+    finally:
+        conn.close()
+
+    return redirect(url_for("admin_users"))
+
 
 # logout
 @app.route("/logout")
