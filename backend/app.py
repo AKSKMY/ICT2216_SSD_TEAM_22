@@ -10,33 +10,32 @@ from flask_login import (
     logout_user, login_required, current_user
 )
 
-# 1. DIRECTORY CONFIGURATION
-#
-#   └── html/   → Jinja templates (index.html, login.html, etc.)
-#   └── static/ → Static assets (CSS, JS, images)
+# ───────────────────────────────────────────────────────
+# FLASK APP CONFIGURATION
+# ───────────────────────────────────────────────────────
 project_root   = os.path.dirname(os.path.abspath(__file__))
 html_folder    = os.path.join(project_root, "html")
 static_folder  = os.path.join(project_root, "static")
 
-# 2. CREATE FLASK APP WITH CUSTOM STATIC/TEMPLATE PATHS
 app = Flask(
     __name__,
     template_folder=html_folder,
     static_folder=static_folder,
-    static_url_path="/static"  # Files are accessed at /static/...
+    static_url_path="/static" 
 )
 
-# 3. SECRET KEY & DATABASE CONFIGURATION
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "ssd-team-22-project")
 
+# ───────────────────────────────────────────────────────
+# LOGIN MANAGER CONFIGURATION
+# ───────────────────────────────────────────────────────
 login_manager = LoginManager(app)
 login_manager.login_view = "login"  
 
-app = Flask(__name__, template_folder=html_folder, static_folder=static_folder, static_url_path="/static")
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "ssd-team-22-project")
 
-# Need to hide this somehow someway maybe in another db
-# Database Connection (MySQL)
+# ───────────────────────────────────────────────────────
+# DATABASE CONNECTION (MySQL)
+# ───────────────────────────────────────────────────────
 def get_db():
     return pymysql.connect(
         host=os.getenv("DB_HOST", "localhost"),
@@ -51,7 +50,9 @@ def get_db():
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
-# User Class
+# ───────────────────────────────────────────────────────
+# USER MODEL
+# ───────────────────────────────────────────────────────
 class User(UserMixin):
     def __init__(self, user_Id, username, password, role):
     # def __init__(self, user_Id, username, password):
@@ -84,10 +85,17 @@ def load_user(user_id):
         return User(**row)
     return None
 
-# Home page — serves html/index.html
-@app.route("/")
-def serve_index():
-    return render_template("index.html")
+# ───────────────────────────────────────────────────────
+# GLOBAL TEMPLATE CONTEXT
+# Makes `current_user` available in all templates
+# ───────────────────────────────────────────────────────   
+@app.context_processor
+def inject_user():
+    return dict(current_user=current_user)
+
+# ───────────────────────────────────────────────────────
+# ROUTES
+# ───────────────────────────────────────────────────────
 
 # Run this to test ur db connection
 @app.route("/test-db")
@@ -102,7 +110,12 @@ def test_db():
     except Exception as e:
         return f"MySQL connection failed: {e}"
 
-# Just a simple register for now security stuff worry ltr
+# index.html (Landing Page)
+@app.route("/")
+def serve_index():
+    return render_template("index.html")
+
+# register.html (No Security aspects yet)
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if current_user.is_authenticated:
@@ -157,7 +170,7 @@ def register():
 
     return render_template("register.html")
 
-# Same for login
+# login.html (No Security Aspect yet)
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
@@ -189,11 +202,13 @@ def login():
 
     return render_template("login.html")
 
+# dashboard.html
 @app.route("/dashboard")
 @login_required
 def dashboard():
     return render_template("dashboard.html", user=current_user)
 
+# logout
 @app.route("/logout")
 @login_required
 def logout():
