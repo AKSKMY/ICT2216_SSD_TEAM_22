@@ -1,48 +1,51 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; }
-    h1, h2 { margin-bottom: 10px; }
-    ul { list-style-type: none; padding: 0; }
-    li { margin: 6px 0; }
-    a { text-decoration: none; color: blue; }
-  </style>
-</head>
-<body>
-  <h1>Welcome, {{ user.username }}!</h1>
-  <p>Your role: <strong>{{ user.role }}</strong></p>
+{% extends "base.html" %}
+{% block title %}Dashboard - MediVault{% endblock %}
 
-  {% if user.role == 'admin' %}
-    <h2>Administrator Menu</h2>
-    <ul>
-      <li><a href="/admin/settings">Admin Settings</a></li>
-      <li><a href="/admin/users">Manage Users</a></li>
-      <!-- …etc… -->
-    </ul>
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-10">
+    <h1 class="mb-4">Welcome, {{ current_user.username }}!</h1>
+    <p class="lead">You're logged in as <strong>{{ current_user.role }}</strong>.</p>
 
-  {% elif user.role == 'doctor' %}
-    <h2>Doctor Portal</h2>
-    <ul>
-      <li><a href="/doctor/patients">My Patients</a></li>
-      <li><a href="/doctor/schedule">My Schedule</a></li>
-      <!-- …etc… -->
-    </ul>
+    {% if current_user.role == 'Admin' %}
+      <div class="row mt-4">
+        <!-- Card: User Count -->
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">Total Users</h5>
+              <p class="card-text fs-4">1,234</p>
+            </div>
+          </div>
+        </div>
 
-  {% elif user.role == 'user' %}
-    <h2>User Home</h2>
-    <ul>
-      <li><a href="/user/profile">My Profile</a></li>
-      <li><a href="/user/records">My Records</a></li>
-      <!-- …etc… -->
-    </ul>
-  {% endif %}
+        <!-- Card: System Logs -->
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">System Logs</h5>
+              <p class="card-text fs-6">View recent activity and access logs</p>
+              <a href="/admin/logs" class="btn btn-outline-primary btn-sm">View Logs</a>
+            </div>
+          </div>
+        </div>
 
-  <p>
-    <a href="{{ url_for('logout') }}">Log Out</a>
-  </p>
-</body>
-</html>
+        <!-- Card: Settings -->
+        <div class="col-md-4 mb-4">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">Settings</h5>
+              <p class="card-text">Manage platform configuration and policies</p>
+              <a href="/admin/settings" class="btn btn-outline-primary btn-sm">Go to Settings</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="alert alert-warning mt-4">
+        This dashboard is currently only available to administrators.
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
