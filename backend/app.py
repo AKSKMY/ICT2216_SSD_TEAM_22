@@ -41,7 +41,7 @@ def get_db():
         host=os.getenv("DB_HOST", "localhost"),
         user=os.getenv("DB_USER", "root"),
         # Change pw to what u set ur localhost pw
-        password=os.getenv("DB_PASSWORD", "admin"),
+        password=os.getenv("DB_PASSWORD", "inf2003database"),
         # Change to whatever you call ur schema
         database=os.getenv("DB_NAME", "rbac"),
         cursorclass=pymysql.cursors.DictCursor
@@ -144,7 +144,7 @@ def register():
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "")
         password = request.form.get("password", "")
-        role_name = request.form.get("role", "").strip()
+        # role_name = request.form.get("role", "").strip()
 
         # if not username or not password or not role_name:
         #     flash("All fields are required.", "error")
@@ -159,7 +159,7 @@ def register():
                     flash("Username already exists.", "error")
                     return render_template("register.html")
                 
-                cur.execute("SELECT role_Id FROM role WHERE role_name = %s", (role_name,))
+                cur.execute("SELECT role_Id FROM role WHERE role_name = %s", ("Patient",))
                 roleresult = cur.fetchone()
                 role_id = roleresult['role_Id']
                 
@@ -215,7 +215,15 @@ def login():
             user = User(**row)
             login_user(user)
             print("login successful")
-            return redirect(url_for("dashboard"))
+            if row["role"] == "Patient":
+                return redirect(url_for("dashboard"))
+            elif row["role"] == "Admin":
+                return redirect(url_for("admin_users"))
+            elif row["role"] == "Doctor":
+                return redirect(url_for(""))
+            elif row["role"] == "Nurse":
+                return redirect(url_for(""))
+                
         else:
             flash("Invalid username or password.", "error")
 
