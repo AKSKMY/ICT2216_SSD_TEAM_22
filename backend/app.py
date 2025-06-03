@@ -1,5 +1,6 @@
 import os
 import pymysql
+
 from flask import (
     Flask, send_from_directory, render_template,
     request, redirect, url_for, flash
@@ -220,7 +221,7 @@ def login():
             elif row["role"] == "Admin":
                 return redirect(url_for("view_users"))
             elif row["role"] == "Doctor":
-                return redirect(url_for(""))
+                return redirect(url_for("dashboard"))
             elif row["role"] == "Nurse":
                 return redirect(url_for(""))
                 
@@ -368,6 +369,83 @@ def create_account():
 @login_required
 def view_logs():
     return render_template("admin_viewLogs.html")
+
+# Doctor - View patients
+@app.route("/doctor/viewPatients")
+@login_required
+def view_patients():
+    if current_user.role != 'Doctor':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT DISTINCT p.patient_Id, p.first_name, p.last_name, p.age, p.gender, p.data_of_birth
+            FROM rbac.patient p
+        """)
+        users = cur.fetchall()
+
+    return render_template("doctor_viewPatients.html", users=users)
+
+# Doctor - View medical records
+@app.route('/doctor/patientRecords/<int:patient_id>')
+@login_required
+def view_patient_records(patient_id):
+    if current_user.role != 'Doctor':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT mr.record_id, mr.diagnosis, mr.date,
+                   p.first_name AS patient_first_name, p.last_name AS patient_last_name,
+                   d.first_name AS doctor_first_name, d.last_name AS doctor_last_name
+            FROM rbac.medical_record mr
+            JOIN rbac.patient p ON mr.patient_id = p.patient_Id
+            JOIN rbac.doctor d ON mr.doctor_id = d.doctor_Id
+            WHERE mr.patient_id = %s AND mr.doctor_id = %s
+            ORDER BY mr.date DESC
+        """, (patient_id, current_user.id))
+        records = cur.fetchall()
+
+    return render_template('medicalRecord.html', records=records)
+
+
+# Patient - View medical records
+@app.route('/user/patientRecords')
+@login_required
+def view_medicalRecords():
+    if current_user.role != 'Patient':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("SELECT patient_Id FROM rbac.patient WHERE patient_Id = %s", (current_user.id,))
+        result = cur.fetchone()
+        if not result:
+            flash("Patient profile not found.", "error")
+            return redirect(url_for("dashboard"))
+
+        patient_id = result["patient_Id"]
+
+        cur.execute("""
+            SELECT mr.record_id, mr.diagnosis, mr.date,
+                   d.first_name AS doctor_first_name, d.last_name AS doctor_last_name,
+                   p.first_name AS patient_first_name, p.last_name AS patient_last_name
+            FROM rbac.medical_record mr
+            JOIN rbac.doctor d ON mr.doctor_id = d.doctor_Id
+            JOIN rbac.patient p ON mr.patient_id = p.patient_Id
+            WHERE mr.patient_id = %s
+            ORDER BY mr.date DESC
+        """, (patient_id,))
+        records = cur.fetchall()
+
+    return render_template('medicalRecord.html', records=records)
+
+
 
 # logout
 @app.route("/logout")

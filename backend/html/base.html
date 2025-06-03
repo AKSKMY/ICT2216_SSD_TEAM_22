@@ -27,12 +27,12 @@
             <a href="/admin/viewUsers" class="text-white text-decoration-none me-3">Manage Users</a>
 
             {% elif current_user.role == 'Doctor' %}
-            <a href="/doctor/patients" class="text-white text-decoration-none me-3">My Patients</a>
+            <a href="/doctor/viewPatients" class="text-white text-decoration-none me-3">My Patients</a>
             <a href="/doctor/schedule" class="text-white text-decoration-none me-3">Schedule</a>
 
             {% elif current_user.role == 'Patient' %}
             <a href="/user/profile" class="text-white text-decoration-none me-3">Profile</a>
-            <a href="/user/records" class="text-white text-decoration-none me-3">Records</a>
+            <a href="/user/patientRecords" class="text-white text-decoration-none me-3">Records</a>
             {% endif %}
 
             <a href="{{ url_for('logout') }}" class="text-white text-decoration-none">Logout</a>
