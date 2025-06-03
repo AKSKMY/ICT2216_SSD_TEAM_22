@@ -14,7 +14,7 @@
       <input type="email" name="email" class="form-control" value="{{ user.email or '' }}">
     </div>
     <button type="submit" class="btn btn-primary">Update</button>
-    <a href="{{ url_for('admin_users') }}" class="btn btn-secondary">Cancel</a>
+    <a href="{{ url_for('view_users') }}" class="btn btn-secondary">Cancel</a>
   </form>
 </div>
 {% endblock %}

@@ -41,7 +41,7 @@ def get_db():
         host=os.getenv("DB_HOST", "localhost"),
         user=os.getenv("DB_USER", "root"),
         # Change pw to what u set ur localhost pw
-        password=os.getenv("DB_PASSWORD", "inf2003database"),
+        password=os.getenv("DB_PASSWORD", "admin"),
         # Change to whatever you call ur schema
         database=os.getenv("DB_NAME", "rbac"),
         cursorclass=pymysql.cursors.DictCursor
@@ -218,7 +218,7 @@ def login():
             if row["role"] == "Patient":
                 return redirect(url_for("dashboard"))
             elif row["role"] == "Admin":
-                return redirect(url_for("admin_users"))
+                return redirect(url_for("view_users"))
             elif row["role"] == "Doctor":
                 return redirect(url_for(""))
             elif row["role"] == "Nurse":
@@ -233,12 +233,12 @@ def login():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html", user=current_user)
+    return render_template("dashboard.html")
 
 # Admin - View all non-admin users in a single table
-@app.route("/admin/users")
+@app.route("/admin/viewUsers")
 @login_required
-def admin_users():
+def view_users():
     if current_user.role != 'Admin':
         flash("Access denied.", "error")
         return redirect(url_for("dashboard"))
@@ -255,7 +255,7 @@ def admin_users():
         """)
         users = cur.fetchall()
 
-    return render_template("admin_users.html", users=users)
+    return render_template("admin_viewUsers.html", users=users)
 
 # Admin - Edit User
 @app.route("/admin/editUser/<int:user_id>", methods=["GET", "POST"])
@@ -274,7 +274,7 @@ def edit_user(user_id):
                         (username, email, user_id))
             conn.commit()
             flash("User updated successfully.", "success")
-            return redirect(url_for("admin_users"))
+            return redirect(url_for("view_users"))
 
         # GET request: Fetch user details
         cur.execute("SELECT username, email FROM user WHERE user_Id = %s", (user_id,))
@@ -283,7 +283,7 @@ def edit_user(user_id):
 
     if not user:
         flash("User not found.", "error")
-        return redirect(url_for("admin_users"))
+        return redirect(url_for("view_users"))
 
     return render_template("admin_editUsers.html", user=user, user_id=user_id)
 
@@ -310,8 +310,64 @@ def delete_user(user_id):
     finally:
         conn.close()
 
-    return redirect(url_for("admin_users"))
+    return redirect(url_for("view_users"))
 
+# Admin - Create Staff Account
+@app.route("/admin/createAccount", methods=["GET", "POST"])
+@login_required
+def create_account():
+    if current_user.role != 'Admin' or not has_permission(current_user.id, "Manage Users"):
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+        role_name = request.form.get("role", "").strip()
+
+        if not username or not email or not password or not role_name:
+            flash("All fields are required.", "error")
+            return render_template("admin_createAccount.html")
+
+        conn = get_db()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM user WHERE username = %s", (username,))
+                if cur.fetchone():
+                    flash("Username already exists.", "error")
+                    return render_template("admin_createAccount.html")
+
+                cur.execute("SELECT role_Id FROM role WHERE role_name = %s", (role_name,))
+                role_row = cur.fetchone()
+                if not role_row:
+                    flash("Invalid role selected.", "error")
+                    return render_template("admin_createAccount.html")
+                role_id = role_row["role_Id"]
+
+                hashed_pw = generate_password_hash(password)
+                cur.execute("INSERT INTO user (username, email, password) VALUES (%s, %s, %s)",
+                            (username, email, hashed_pw))
+                user_id = cur.lastrowid
+                cur.execute("INSERT INTO userrole (user_Id, role_Id) VALUES (%s, %s)",
+                            (user_id, role_id))
+                conn.commit()
+                flash("Staff account created successfully.", "success")
+        except Exception as e:
+            conn.rollback()
+            flash("Error creating account.", "error")
+            print("Create account error:", e)
+        finally:
+            conn.close()
+
+    return render_template("admin_createAccount.html")
+
+
+# Admin - View Audit Logs
+@app.route("/admin/viewLogs")
+@login_required
+def view_logs():
+    return render_template("admin_viewLogs.html")
 
 # logout
 @app.route("/logout")
