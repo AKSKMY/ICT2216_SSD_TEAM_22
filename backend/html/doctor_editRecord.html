@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Edit Medical Record - MediVault{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Edit Medical Record</h2>
+
+  <form method="POST">
+    <div class="mb-3">
+      <label for="diagnosis" class="form-label">Diagnosis</label>
+      <textarea class="form-control" id="diagnosis" name="diagnosis" rows="4" required>{{ record.diagnosis }}</textarea>
+    </div>
+
+    <div class="mb-3">
+      <label for="date" class="form-label">Date</label>
+      <input type="date" class="form-control" id="date" name="date" value="{{ record.date }}" required>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('view_patient_records', patient_id=record.patient_id) }}" class="btn btn-secondary ms-2">Cancel</a>
+  </form>
+</div>
+{% endblock %}

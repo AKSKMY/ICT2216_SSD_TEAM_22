@@ -22,7 +22,7 @@ app = Flask(
     __name__,
     template_folder=html_folder,
     static_folder=static_folder,
-    static_url_path="/static" 
+    static_url_path="/static"
 )
 
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "ssd-team-22-project")
@@ -31,7 +31,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "ssd-team-22-project")
 # LOGIN MANAGER CONFIGURATION
 # ───────────────────────────────────────────────────────
 login_manager = LoginManager(app)
-login_manager.login_view = "login"  
+login_manager.login_view = "login"
 
 
 # ───────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ class User(UserMixin):
         self.username = username
         self.password = password
         # fetched from userrole + role table
-        self.role = role  
+        self.role = role
 
     def check_password(self, plain_password):
         return check_password_hash(self.password, plain_password)
@@ -159,11 +159,11 @@ def register():
                 if cur.fetchone():
                     flash("Username already exists.", "error")
                     return render_template("register.html")
-                
+
                 cur.execute("SELECT role_Id FROM role WHERE role_name = %s", ("Patient",))
                 roleresult = cur.fetchone()
                 role_id = roleresult['role_Id']
-                
+
                 hashed_pw = generate_password_hash(password)
 
                 # Insert user
@@ -174,7 +174,7 @@ def register():
 
                 # Get auto-incremented user ID
                 user_id = cur.lastrowid
-                
+
                 # Assign role
                 cur.execute("INSERT INTO userrole (user_Id, role_Id) VALUES (%s, %s)", (user_id, role_id))
 
@@ -224,7 +224,7 @@ def login():
                 return redirect(url_for("dashboard"))
             elif row["role"] == "Nurse":
                 return redirect(url_for(""))
-                
+
         else:
             flash("Invalid username or password.", "error")
 
@@ -412,6 +412,78 @@ def view_patient_records(patient_id):
 
     return render_template('medicalRecord.html', records=records)
 
+# Doctor - Add medical records
+@app.route('/doctor/addRecord/<int:patient_id>', methods=['GET', 'POST'])
+@login_required
+def add_medical_record(patient_id):
+    if current_user.role != 'Doctor':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+
+    if request.method == 'POST':
+        diagnosis = request.form.get('diagnosis')
+        date = request.form.get('date')  # should be in YYYY-MM-DD format
+
+        if not diagnosis or not date:
+            flash("All fields are required.", "error")
+            return redirect(request.url)
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO rbac.medical_record (patient_id, diagnosis, doctor_id, date)
+                VALUES (%s, %s, %s, %s)
+            """, (patient_id, diagnosis, current_user.id, date))
+            conn.commit()
+
+        flash("Medical record added successfully!", "success")
+        return redirect(url_for('view_patient_records', patient_id=patient_id))
+
+    # For GET: render form
+    return render_template('doctor_addRecord.html', patient_id=patient_id)
+
+# Doctor - Edit medical records
+@app.route('/doctor/editRecord/<int:record_id>', methods=['GET', 'POST'])
+@login_required
+def edit_medical_record(record_id):
+    if current_user.role != 'Doctor':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:  # Use dictionary cursor
+        cur.execute("""
+            SELECT record_id, diagnosis, date, patient_id
+            FROM rbac.medical_record
+            WHERE record_id = %s
+        """, (record_id,))
+        record = cur.fetchone()
+
+    if not record:
+        flash("Medical record not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == 'POST':
+        diagnosis = request.form.get('diagnosis')
+        date = request.form.get('date')
+
+        if not diagnosis or not date:
+            flash("All fields are required.", "error")
+            return redirect(request.url)
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE rbac.medical_record
+                SET diagnosis = %s, date = %s
+                WHERE record_id = %s
+            """, (diagnosis, date, record_id))
+            conn.commit()
+
+        flash("Medical record updated successfully!", "success")
+        return redirect(url_for('view_patient_records', patient_id=record['patient_id']))
+
+    return render_template('doctor_editRecord.html', record=record)
 
 # Patient - View medical records
 @app.route('/user/patientRecords')
