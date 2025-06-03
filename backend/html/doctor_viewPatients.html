@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}All Patients - MediVault{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mb-4">Patient List</h1>
+
+  {% if users %}
+  <table class="table table-striped table-bordered">
+    <thead class="thead-light">
+      <tr>
+        <th>Patient ID</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Age</th>
+        <th>Gender</th>
+        <th>Date of Birth</th>
+        <th>Medical Records</th>  <!-- New column header -->
+      </tr>
+    </thead>
+    <tbody>
+      {% for patient in users %}
+      <tr>
+        <td>{{ patient.patient_Id }}</td>
+        <td>{{ patient.first_name }}</td>
+        <td>{{ patient.last_name }}</td>
+        <td>{{ patient.age }}</td>
+        <td>{{ patient.gender }}</td>
+        <td>{{ patient.data_of_birth }}</td>
+        <td>
+          <a href="{{ url_for('view_patient_records', patient_id=patient.patient_Id) }}" class="btn btn-primary btn-sm">
+            View Records
+          </a>
+        </td>  <!-- New column data -->
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No patients found.</p>
+  {% endif %}
+</div>
+{% endblock %}

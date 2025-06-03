@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mb-4">Medical Records</h1>
+
+  {% if current_user.role == 'Doctor' %}
+  <div class="mb-3">
+    <a href="" class="btn btn-success">
+      + Add Medical Record
+    </a>
+  </div>
+  {% endif %}
+
+  {% if records %}
+  <table class="table table-bordered table-striped">
+    <thead class="thead-light">
+      <tr>
+        <th>Record ID</th>
+        <th>Diagnosis</th>
+        <th>Date</th>
+        <th>Doctor</th>
+        <th>Patient</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for record in records %}
+      <tr>
+        <td>{{ record.record_id }}</td>
+        <td>{{ record.diagnosis }}</td>
+        <td>{{ record.date }}</td>
+        <td>{{ record.doctor_first_name }} {{ record.doctor_last_name }}</td>
+        <td>{{ record.patient_first_name }} {{ record.patient_last_name }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>No medical records found for this patient.</p>
+  {% endif %}
+</div>
+{% endblock %}
