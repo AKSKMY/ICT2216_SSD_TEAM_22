@@ -1,44 +1,36 @@
-# ───────────────────────────────────────────────────────────────────────────────
-# docker-compose.yml  (at the root of ICT2216_SSD_TEAM_22/)
-# ───────────────────────────────────────────────────────────────────────────────
 version: "3.8"
 
 services:
-  # ─────────────────────────────────────────────────────────────────────────────
-  # “db” service: MySQL 5.7 (matches XAMPP’s MySQL version)
-  # ─────────────────────────────────────────────────────────────────────────────
+  # ───────────────────────────────────────────────────────────────────────
+  # MySQL 5.7 service (named "db")
+  # ───────────────────────────────────────────────────────────────────────
   db:
-    image: mysql:8.0
+    image: mysql:5.7
     container_name: rbac_db
     command: --default-authentication-plugin=mysql_native_password
     restart: always
 
-    # Publish container’s 3306 → host 3306
     ports:
       - "3306:3306"
 
     environment:
-      MYSQL_ROOT_PASSWORD: admin          # root’s password
-      MYSQL_DATABASE: rbac                # will create database `rbac`
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: rbac
       MYSQL_USER: root
       MYSQL_PASSWORD: admin
 
-    volumes:
-      - db_data:/var/lib/mysql
-
-    # Mount SQL scripts so MySQL runs them on first initialization
-    # Any .sql in /docker-entrypoint-initdb.d/ is auto‐executed (only on first run)
+    # Only one "volumes:" block—do not repeat this key twice
     volumes:
       - db_data:/var/lib/mysql
       - ./Database/schema_script.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - ./Database/data_population.sql:/docker-entrypoint-initdb.d/02_data.sql
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # “flask_app” service: your Flask + Gunicorn container
-  # ─────────────────────────────────────────────────────────────────────────────
+  # ───────────────────────────────────────────────────────────────────────
+  # Flask + Gunicorn service
+  # ───────────────────────────────────────────────────────────────────────
   flask_app:
     build:
-      context: .          # look for Dockerfile in .
+      context: .
       dockerfile: Dockerfile
     container_name: rbac_flask_app
     restart: unless-stopped
@@ -46,25 +38,19 @@ services:
       - db
 
     ports:
-      # Map host port 80 → container port 5000
       - "80:5000"
 
     environment:
-      # Tell Flask to use ProductionConfig
       - FLASK_ENV=production
-
-      # Must set a real secret key, otherwise ProductionConfig will raise RuntimeError
       - FLASK_SECRET_KEY=Your_Very_Strong_Secret_Key_ChangeThis!
-
-      # These must match what config.py expects
       - DB_HOST=db
       - DB_USER=root
       - DB_PASSWORD=admin
       - DB_NAME=rbac
 
-    # (Optional) If you want to see local file changes without rebuilding, uncomment:
-    volumes:
-      - ./backend:/app
+    # (Optional) If you want to see your local `backend/` changes without rebuilding:
+    # volumes:
+    #   - ./backend:/app
 
 volumes:
   db_data:
