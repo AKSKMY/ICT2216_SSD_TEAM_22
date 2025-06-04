@@ -9,7 +9,7 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: mysql_db
+    container_name: medivault-mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: your_root_password
@@ -23,7 +23,7 @@ services:
 
 flask_app:
     build: .
-    container_name: flask_app
+    container_name: medivault-flask-app
     restart: always
 
     # Expose port 5000 so you can browse it on localhost:5000
@@ -32,20 +32,16 @@ flask_app:
 
     environment:
       # Tell Flask which app to run
-      FLASK_APP: app.py
-      FLASK_ENV: development
-
-      # This is the single DATABASE_URL var that SQLAlchemy will read.
-      # Format: mysql+pymysql://<user>:<password>@<hostname>:<port>/<database>
-      DATABASE_URL: mysql+pymysql://root:MediVault123!@mysql_db:3306/medivault_db
+      FLASK_ENV: "production"
+      FLASK_SECRET_KEY: "${FLASK_SECRET_KEY}"
+      DB_HOST: "mysql"
+      DB_USER: "root"
+      DB_PASSWORD: "MediVault123!"
+      DB_NAME: "medivault_db"
+      SQLALCHEMY_ECHO: "False"
 
     depends_on:
-      - mysql_db
-
-    # Mount your code and templates into /app inside the container
-    volumes:
-      - ./backend/:/app
-      - ./html/:/app/templates
+      - mysql
 
 volumes:
   mysql_data:
