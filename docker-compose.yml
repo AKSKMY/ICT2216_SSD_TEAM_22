@@ -21,7 +21,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
-flask_app:
+  flask_app:
     build: .
     container_name: medivault-flask-app
     restart: always
