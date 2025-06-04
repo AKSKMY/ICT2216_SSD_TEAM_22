@@ -2,10 +2,10 @@ version: "3.8"
 
 services:
   # ───────────────────────────────────────────────────────────────────────
-  # MySQL 5.7 service (named "db")
+  # MySQL 8.0 service (named "db")
   # ───────────────────────────────────────────────────────────────────────
   db:
-    image: mysql:5.7
+    image: mysql:80
     container_name: rbac_db
     command: --default-authentication-plugin=mysql_native_password
     restart: always
