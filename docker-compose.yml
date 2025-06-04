@@ -53,11 +53,12 @@ services:
     # (Optional) If you want to see your local `backend/` changes without rebuilding:
     volumes:
         - ./backend:/app
-    command: >
-      gunicorn
-      --bind 0.0.0.0:5000
-      --reload        # ← watch for changes and auto-restart
-      app:app
+    command:
+      - gunicorn
+      - --bind
+      - "0.0.0.0:5000"
+      - --reload
+      - app:app
 
 volumes:
   db_data:
