@@ -1,51 +1,58 @@
+version: "3.8"
+
 services:
-  apache:
-    image: httpd:alpine
-    container_name: apache_web
-    ports:
-      - "80:80"
-    volumes:
-      - ./html:/usr/local/apache2/htdocs/
-
-  mysql:
+  # ───────────────────────────────────────────────────────────────────────
+  # MySQL 8.0 service (named "db")
+  # ───────────────────────────────────────────────────────────────────────
+  db:
     image: mysql:8.0
-    container_name: mysql_db
+    container_name: rbac_db
+    command: --default-authentication-plugin=mysql_native_password
     restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: your_root_password
-      MYSQL_DATABASE: medivault_db
-      MYSQL_USER: root
-      MYSQL_PASSWORD: MediVault123!
-    ports:
-      - "3307:3307"
-    volumes:
-      - mysql_data:/var/lib/mysql
 
+    ports:
+      - "3306:3306"
+
+    environment:
+      #! TO CHANGE ROOT PASSWORD UPON FINALISING
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: rbac
+      #! NORMAL USER CREDENTIALS
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: appuser_password_here
+
+    # Only one "volumes:" block—do not repeat this key twice
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./Database/schema_script.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./Database/data_population.sql:/docker-entrypoint-initdb.d/02_data.sql
+
+  # ───────────────────────────────────────────────────────────────────────
+  # Flask + Gunicorn service
+  # ───────────────────────────────────────────────────────────────────────
   flask_app:
-    build: .
-    container_name: flask_app
-    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rbac_flask_app
+    restart: unless-stopped
+    depends_on:
+      - db
 
-    # Expose port 5000 so you can browse it on localhost:5000
     ports:
-      - "5000:5000"
+      - "80:5000"
 
     environment:
-      # Tell Flask which app to run
-      FLASK_APP: app.py
-      FLASK_ENV: development
+      - FLASK_ENV=production
+      - FLASK_SECRET_KEY=Your_Very_Strong_Secret_Key_MEDIVAULT!
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=admin
+      - DB_NAME=rbac
 
-      # This is the single DATABASE_URL var that SQLAlchemy will read.
-      # Format: mysql+pymysql://<user>:<password>@<hostname>:<port>/<database>
-      DATABASE_URL: mysql+pymysql://root:MediVault123!@mysql_db:3306/medivault_db
-
-    depends_on:
-      - mysql
-
-    # Mount your code and templates into /app inside the container
+    # (Optional) If you want to see your local `backend/` changes without rebuilding:
     volumes:
-      - ./backend/:/app
-      - ./html/:/app/templates
+       - ./backend:/app
 
 volumes:
-  mysql_data:
+  db_data:

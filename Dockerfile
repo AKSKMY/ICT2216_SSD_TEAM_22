@@ -1,26 +1,27 @@
-# ───────────────────────────────────────────────────────────────────────
-# 1. Start from a minimal Python image
-FROM python:3.11-slim
+# ───────────────────────────────────────────────────────────────────────────────
+# Dockerfile  (place this at the *root* of ICT2216_SSD_TEAM_22/)
+# ───────────────────────────────────────────────────────────────────────────────
 
-# 2. Set /app as the working directory inside the container
+FROM python:3.10-slim
+
+# 1) Create /app directory and switch working directory
 WORKDIR /app
 
-# 3. Copy only requirements first (so Docker can cache pip install)
-COPY backend/requirements.txt /app/requirements.txt
+# 2) Copy only requirements.txt (caching layer)
+COPY ./backend/requirements.txt /app/requirements.txt
 
-# 4. Install system dependencies if needed & then install Python packages
-RUN apt-get update \
- && apt-get install -y --no-install-recommends gcc libpq-dev \
- && pip install --no-cache-dir -r /app/requirements.txt \
- && apt-get purge -y --auto-remove gcc \
- && rm -rf /var/lib/apt/lists/*
+# 3) Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Copy your Flask app code & templates into the image
-COPY backend/ /app/
-COPY html/    /app/templates/
+# 4) Copy the entire "backend" folder into /app
+#    This includes app.py, config.py, html/, static/, etc.
+COPY ./backend /app
 
-# 6. Expose port 5000 for Flask
+# 5) Expose port 5000 (Gunicorn will listen here)
 EXPOSE 5000
 
-# 7. Default command: run Flask’s development server (you can swap for gunicorn later)
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+# 6) Default environment = production (can be overridden)
+ENV FLASK_ENV=production
+
+# 7) Launch Gunicorn, binding to 0.0.0.0:5000, serving "app:app"
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
