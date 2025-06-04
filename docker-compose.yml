@@ -44,15 +44,15 @@ services:
 
     environment:
       - FLASK_ENV=production
-      - FLASK_SECRET_KEY=Your_Very_Strong_Secret_Key_ChangeThis!
+      - FLASK_SECRET_KEY=Your_Very_Strong_Secret_Key_MEDIVAULT!
       - DB_HOST=db
       - DB_USER=root
       - DB_PASSWORD=admin
       - DB_NAME=rbac
 
     # (Optional) If you want to see your local `backend/` changes without rebuilding:
-    # volumes:
-    #   - ./backend:/app
+    volumes:
+       - ./backend:/app
 
 volumes:
   db_data:
