@@ -52,7 +52,9 @@ services:
 
     # (Optional) If you want to see your local `backend/` changes without rebuilding:
     volumes:
-       - ./backend:/app
+        - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --reload
+    #                       ^^^^^^^  “--reload” makes Uvicorn watch for file changes
 
 volumes:
   db_data:
