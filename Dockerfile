@@ -1,20 +1,27 @@
-# Use official lightweight Python image
+# ───────────────────────────────────────────────────────────────────────────────
+# Dockerfile  (place this at the *root* of ICT2216_SSD_TEAM_22/)
+# ───────────────────────────────────────────────────────────────────────────────
+
 FROM python:3.10-slim
 
-# Set working directory
+# 1) Create /app directory and switch working directory
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+# 2) Copy only requirements.txt (caching layer)
+COPY ./backend/requirements.txt /app/requirements.txt
 
-# Install dependencies
+# 3) Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy entire backend folder contents (app.py, config.py, html/, static/, etc.)
-COPY . .
+# 4) Copy the entire "backend" folder into /app
+#    This includes app.py, config.py, html/, static/, etc.
+COPY ./backend /app
 
-# Expose the port Flask listens on
+# 5) Expose port 5000 (Gunicorn will listen here)
 EXPOSE 5000
 
-# Use gunicorn for production WSGI server
-CMD ["gunicorn", "app:app", "-b", "0.0.0.0:5000", "--workers", "4"]
+# 6) Default environment = production (can be overridden)
+ENV FLASK_ENV=production
+
+# 7) Launch Gunicorn, binding to 0.0.0.0:5000, serving "app:app"
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
