@@ -21,14 +21,14 @@
     <tbody>
       {% for patient in users %}
       <tr>
-        <td>{{ patient.patient_Id }}</td>
+        <td>{{ patient.user_Id }}</td>
         <td>{{ patient.first_name }}</td>
         <td>{{ patient.last_name }}</td>
         <td>{{ patient.age }}</td>
         <td>{{ patient.gender }}</td>
         <td>{{ patient.data_of_birth }}</td>
         <td>
-          <a href="{{ url_for('view_patient_records', patient_id=patient.patient_Id) }}" class="btn btn-primary btn-sm">
+          <a href="{{ url_for('view_patient_records', patient_id=patient.user_Id) }}" class="btn btn-primary btn-sm">
             View Records
           </a>
         </td>  <!-- New column data -->
