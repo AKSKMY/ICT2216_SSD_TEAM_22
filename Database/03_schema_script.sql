@@ -196,9 +196,27 @@ CREATE TABLE IF NOT EXISTS `rbac`.`userrole` (
   CONSTRAINT `userrole_ibfk_2`
     FOREIGN KEY (`role_Id`)
     REFERENCES `rbac`.`role` (`role_Id`))
+
+-- -----------------------------------------------------
+-- Table `rbac`.`audit_log`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `rbac`.`audit_log`;
+
+CREATE TABLE IF NOT EXISTS `rbac`.`audit_log` (
+  `log_id` INT NOT NULL AUTO_INCREMENT,
+  `user_Id` INT NOT NULL,
+  `timestamp` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `description` TEXT NOT NULL,
+  PRIMARY KEY (`log_id`),
+  CONSTRAINT `fk_auditlog_user_Id`
+    FOREIGN KEY (`user_Id`)
+    REFERENCES `rbac`.`user` (`user_Id`)
+    ON DELETE CASCADE
+)
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_0900_ai_ci;
+
 
 CREATE INDEX `role_Id` ON `rbac`.`userrole` (`role_Id` ASC) VISIBLE;
 
