@@ -347,6 +347,156 @@ def create_account():
 def view_logs():
     return render_template("admin_viewLogs.html")
 
+# Doctor - View patients
+@app.route("/doctor/viewPatients")
+@login_required
+def view_patients():
+    if current_user.role != 'Doctor':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT DISTINCT p.user_Id, p.first_name, p.last_name, p.age, p.gender, p.data_of_birth
+            FROM rbac.patient p
+        """)
+        users = cur.fetchall()
+
+    return render_template("doctor_viewPatients.html", users=users)
+
+# Doctor - View medical records
+@app.route('/doctor/patientRecords/<int:patient_id>')
+@login_required
+def view_patient_records(patient_id):
+    if current_user.role != 'Doctor':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT mr.record_id, mr.diagnosis, mr.date,
+                   p.first_name AS patient_first_name, p.last_name AS patient_last_name,
+                   d.first_name AS doctor_first_name, d.last_name AS doctor_last_name
+            FROM rbac.medical_record mr
+            JOIN rbac.patient p ON mr.patient_id = p.user_Id
+            JOIN rbac.doctor d ON mr.doctor_id = d.user_Id
+            WHERE mr.patient_id = %s AND mr.doctor_id = %s
+            ORDER BY mr.date DESC
+        """, (patient_id, current_user.id))
+        records = cur.fetchall()
+
+    return render_template('medicalRecord.html', records=records)
+
+# Doctor - Add medical records
+@app.route('/doctor/addRecord/<int:patient_id>', methods=['GET', 'POST'])
+@login_required
+def add_medical_record(patient_id):
+    if current_user.role != 'Doctor':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+
+    if request.method == 'POST':
+        diagnosis = request.form.get('diagnosis')
+        date = request.form.get('date')  # should be in YYYY-MM-DD format
+
+        if not diagnosis or not date:
+            flash("All fields are required.", "error")
+            return redirect(request.url)
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO rbac.medical_record (patient_id, diagnosis, doctor_id, date)
+                VALUES (%s, %s, %s, %s)
+            """, (patient_id, diagnosis, current_user.id, date))
+            conn.commit()
+
+        flash("Medical record added successfully!", "success")
+        return redirect(url_for('view_patient_records', patient_id=patient_id))
+
+    # For GET: render form
+    return render_template('doctor_addRecord.html', patient_id=patient_id)
+
+# Doctor - Edit medical records
+@app.route('/doctor/editRecord/<int:record_id>', methods=['GET', 'POST'])
+@login_required
+def edit_medical_record(record_id):
+    if current_user.role != 'Doctor':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:  # Use dictionary cursor
+        cur.execute("""
+            SELECT record_id, diagnosis, date, patient_id
+            FROM rbac.medical_record
+            WHERE record_id = %s
+        """, (record_id,))
+        record = cur.fetchone()
+
+    if not record:
+        flash("Medical record not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == 'POST':
+        diagnosis = request.form.get('diagnosis')
+        date = request.form.get('date')
+
+        if not diagnosis or not date:
+            flash("All fields are required.", "error")
+            return redirect(request.url)
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE rbac.medical_record
+                SET diagnosis = %s, date = %s
+                WHERE record_id = %s
+            """, (diagnosis, date, record_id))
+            conn.commit()
+
+        flash("Medical record updated successfully!", "success")
+        return redirect(url_for('view_patient_records', patient_id=record['patient_id']))
+
+    return render_template('doctor_editRecord.html', record=record)
+
+# Patient - View medical records
+@app.route('/user/patientRecords')
+@login_required
+def view_medicalRecords():
+    if current_user.role != 'Patient':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("SELECT patient_Id FROM rbac.patient WHERE patient_Id = %s", (current_user.id,))
+        result = cur.fetchone()
+        if not result:
+            flash("Patient profile not found.", "error")
+            return redirect(url_for("dashboard"))
+
+        patient_id = result["patient_Id"]
+
+        cur.execute("""
+            SELECT mr.record_id, mr.diagnosis, mr.date,
+                   d.first_name AS doctor_first_name, d.last_name AS doctor_last_name,
+                   p.first_name AS patient_first_name, p.last_name AS patient_last_name
+            FROM rbac.medical_record mr
+            JOIN rbac.doctor d ON mr.doctor_id = d.doctor_Id
+            JOIN rbac.patient p ON mr.patient_id = p.patient_Id
+            WHERE mr.patient_id = %s
+            ORDER BY mr.date DESC
+        """, (patient_id,))
+        records = cur.fetchall()
+
+    return render_template('medicalRecord.html', records=records)
+
+
+
+# logout
 @app.route("/logout")
 @login_required
 def logout():
