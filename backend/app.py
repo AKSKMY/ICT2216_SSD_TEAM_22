@@ -381,7 +381,7 @@ def view_patients():
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute("""
-            SELECT DISTINCT p.patient_Id, p.first_name, p.last_name, p.age, p.gender, p.data_of_birth
+            SELECT DISTINCT p.user_Id, p.first_name, p.last_name, p.age, p.gender, p.data_of_birth
             FROM rbac.patient p
         """)
         users = cur.fetchall()
@@ -403,8 +403,8 @@ def view_patient_records(patient_id):
                    p.first_name AS patient_first_name, p.last_name AS patient_last_name,
                    d.first_name AS doctor_first_name, d.last_name AS doctor_last_name
             FROM rbac.medical_record mr
-            JOIN rbac.patient p ON mr.patient_id = p.patient_Id
-            JOIN rbac.doctor d ON mr.doctor_id = d.doctor_Id
+            JOIN rbac.patient p ON mr.patient_id = p.user_Id
+            JOIN rbac.doctor d ON mr.doctor_id = d.user_Id
             WHERE mr.patient_id = %s AND mr.doctor_id = %s
             ORDER BY mr.date DESC
         """, (patient_id, current_user.id))
