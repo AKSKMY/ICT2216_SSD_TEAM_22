@@ -21,15 +21,15 @@ VALUES
     ('david', 'david@example.com', 'scrypt:32768:8:1$3v6Hg0W8aXSeMfNt$59018d7c2e74c5803e0e3227386785d29b6d9b5bdedd4a8064c2c8a4fc59f1f66e7201ffdd5c1d3fd21d0c2706024e4416887c08245873c550d1b5709eb3c799');  -- ID = 4
 
 -- Patients (tie patient_id = user_id = 1)
-INSERT INTO `rbac`.`patient` (`patient_id`, `first_name`, `last_name`, `age`, `gender`, `data_of_birth`)
+INSERT INTO `rbac`.`patient` (`user_Id`, `first_name`, `last_name`, `age`, `gender`, `data_of_birth`)
 VALUES (1, 'Alice', 'Johnson', 30, 'Female', '1994-01-01');
 
 -- Doctors (user_id = 2)
-INSERT INTO `rbac`.`doctor` (`doctor_id`, `first_name`, `last_name`, `age`, `gender`)
+INSERT INTO `rbac`.`doctor` (`user_Id`, `first_name`, `last_name`, `age`, `gender`)
 VALUES (2, 'Bob', 'Smith', 45, 'Male');
 
 -- Nurses (user_id = 3)
-INSERT INTO `rbac`.`nurse` (`nurse_id`, `first_name`, `last_name`, `age`, `gender`)
+INSERT INTO `rbac`.`nurse` (`user_Id`, `first_name`, `last_name`, `age`, `gender`)
 VALUES (3, 'Carol', 'White', 28, 'Female');
 
 -- Roles (IDs start from 1)
