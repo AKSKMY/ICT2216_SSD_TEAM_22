@@ -399,7 +399,7 @@ def view_patient_records(patient_id):
         """, (patient_id, current_user.id))
         records = cur.fetchall()
 
-    return render_template('medicalRecord.html', records=records)
+    return render_template("medicalRecord.html", records=records, patient_id=patient_id)
 
 
 # Doctor - Add Medical Records
