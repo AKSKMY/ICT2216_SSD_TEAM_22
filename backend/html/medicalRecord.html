@@ -4,9 +4,9 @@
 <div class="container">
   <h1 class="mb-4">Medical Records</h1>
 
-  {% if current_user.role == 'Doctor' %}
+  {% if current_user.role == 'Doctor' and records %}
   <div class="mb-3">
-    <a href="{{ url_for('add_medical_record', patient_id=records[0].record_id if records else 0) }}" class="btn btn-success">
+    <a href="{{ url_for('add_medical_record', patient_id=records[0].patient_id) }}" class="btn btn-success">
       + Add Medical Record
     </a>
   </div>
@@ -21,6 +21,9 @@
         <th>Date</th>
         <th>Doctor</th>
         <th>Patient</th>
+        {% if current_user.role == 'Doctor' %}
+        <th>Actions</th>
+        {% endif %}
       </tr>
     </thead>
     <tbody>
