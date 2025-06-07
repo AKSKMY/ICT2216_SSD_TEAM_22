@@ -53,6 +53,7 @@ def get_db():
         user=app.config["DB_USER"],
         password=app.config["DB_PASSWORD"],
         database=app.config["DB_NAME"],
+        port=12345,
         cursorclass=pymysql.cursors.DictCursor
     )
 
@@ -348,24 +349,34 @@ def view_logs():
     return render_template("admin_viewLogs.html")
 
 # Doctor - View patients
-@app.route("/doctor/viewPatients")
+@app.route("/doctor/viewPatients", methods=["GET", "POST"])
 @login_required
 def view_patients():
     if current_user.role != 'Doctor':
         flash("Access denied.", "error")
         return redirect(url_for("dashboard"))
 
+    search_query = request.args.get("search", "").strip()
+
     conn = get_db()
     with conn.cursor() as cur:
-        cur.execute("""
-            SELECT DISTINCT p.user_Id, p.first_name, p.last_name, p.age, p.gender, p.data_of_birth
-            FROM rbac.patient p
-        """)
+        if search_query:
+            like_pattern = f"%{search_query}%"
+            cur.execute("""
+                SELECT DISTINCT p.user_Id, p.first_name, p.last_name, p.age, p.gender, p.data_of_birth
+                FROM rbac.patient p
+                WHERE p.first_name LIKE %s OR p.last_name LIKE %s
+            """, (like_pattern, like_pattern))
+        else:
+            cur.execute("""
+                SELECT DISTINCT p.user_Id, p.first_name, p.last_name, p.age, p.gender, p.data_of_birth
+                FROM rbac.patient p
+            """)
         users = cur.fetchall()
 
-    return render_template("doctor_viewPatients.html", users=users)
+    return render_template("doctor_viewPatients.html", users=users, search_query=search_query)
 
-# Doctor - View medical records
+# Doctor - View Medical records
 @app.route('/doctor/patientRecords/<int:patient_id>')
 @login_required
 def view_patient_records(patient_id):
@@ -374,9 +385,10 @@ def view_patient_records(patient_id):
         return redirect(url_for("dashboard"))
 
     conn = get_db()
-    with conn.cursor() as cur:
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:  # Use DictCursor
         cur.execute("""
             SELECT mr.record_id, mr.diagnosis, mr.date,
+                   mr.patient_id,
                    p.first_name AS patient_first_name, p.last_name AS patient_last_name,
                    d.first_name AS doctor_first_name, d.last_name AS doctor_last_name
             FROM rbac.medical_record mr
@@ -389,7 +401,8 @@ def view_patient_records(patient_id):
 
     return render_template('medicalRecord.html', records=records)
 
-# Doctor - Add medical records
+
+# Doctor - Add Medical Records
 @app.route('/doctor/addRecord/<int:patient_id>', methods=['GET', 'POST'])
 @login_required
 def add_medical_record(patient_id):
@@ -401,13 +414,20 @@ def add_medical_record(patient_id):
 
     if request.method == 'POST':
         diagnosis = request.form.get('diagnosis')
-        date = request.form.get('date')  # should be in YYYY-MM-DD format
+        date = request.form.get('date')  # expected format: YYYY-MM-DD
 
         if not diagnosis or not date:
             flash("All fields are required.", "error")
             return redirect(request.url)
 
         with conn.cursor() as cur:
+            # Optional: Ensure patient exists
+            cur.execute("SELECT 1 FROM rbac.patient WHERE user_Id = %s", (patient_id,))
+            if not cur.fetchone():
+                flash("Patient not found.", "error")
+                return redirect(url_for("dashboard"))
+
+            # Insert medical record
             cur.execute("""
                 INSERT INTO rbac.medical_record (patient_id, diagnosis, doctor_id, date)
                 VALUES (%s, %s, %s, %s)
@@ -420,7 +440,7 @@ def add_medical_record(patient_id):
     # For GET: render form
     return render_template('doctor_addRecord.html', patient_id=patient_id)
 
-# Doctor - Edit medical records
+# Doctor - Edit Medical records
 @app.route('/doctor/editRecord/<int:record_id>', methods=['GET', 'POST'])
 @login_required
 def edit_medical_record(record_id):
@@ -429,16 +449,17 @@ def edit_medical_record(record_id):
         return redirect(url_for("dashboard"))
 
     conn = get_db()
-    with conn.cursor(pymysql.cursors.DictCursor) as cur:  # Use dictionary cursor
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+        # Fetch the existing record by ID
         cur.execute("""
             SELECT record_id, diagnosis, date, patient_id
             FROM rbac.medical_record
-            WHERE record_id = %s
-        """, (record_id,))
+            WHERE record_id = %s AND doctor_id = %s
+        """, (record_id, current_user.id))
         record = cur.fetchone()
 
     if not record:
-        flash("Medical record not found.", "error")
+        flash("Medical record not found or access denied.", "error")
         return redirect(url_for("dashboard"))
 
     if request.method == 'POST':
@@ -453,8 +474,8 @@ def edit_medical_record(record_id):
             cur.execute("""
                 UPDATE rbac.medical_record
                 SET diagnosis = %s, date = %s
-                WHERE record_id = %s
-            """, (diagnosis, date, record_id))
+                WHERE record_id = %s AND doctor_id = %s
+            """, (diagnosis, date, record_id, current_user.id))
             conn.commit()
 
         flash("Medical record updated successfully!", "success")
@@ -462,7 +483,50 @@ def edit_medical_record(record_id):
 
     return render_template('doctor_editRecord.html', record=record)
 
-# Patient - View medical records
+# Doctor - Add Patients
+@app.route('/doctor/addPatient', methods=['GET', 'POST'])
+@login_required
+def add_patient():
+    if current_user.role != 'Doctor':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT u.user_Id, u.username
+            FROM rbac.user u
+            JOIN rbac.userrole ur ON u.user_Id = ur.user_Id
+            WHERE ur.role_Id = 1
+            AND u.user_Id NOT IN (SELECT user_Id FROM rbac.patient)
+        """)
+        patient_users = cur.fetchall()
+
+    if request.method == 'POST':
+        user_id = request.form.get('user_id')
+        first_name = request.form.get('first_name')
+        last_name = request.form.get('last_name')
+        age = request.form.get('age')
+        gender = request.form.get('gender')
+        dob = request.form.get('date_of_birth')
+
+        if not user_id or not first_name or not last_name:
+            flash("Required fields missing.", "error")
+            return redirect(request.url)
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO rbac.patient (user_Id, first_name, last_name, age, gender, data_of_birth)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (user_id, first_name, last_name, age or None, gender or None, dob or None))
+            conn.commit()
+
+        flash("Patient added successfully!", "success")
+        return redirect(url_for('view_patients'))
+
+    return render_template("doctor_addPatients.html", patient_users=patient_users)
+
+# Patient - View Medical Records
 @app.route('/user/patientRecords')
 @login_required
 def view_medicalRecords():
@@ -471,22 +535,24 @@ def view_medicalRecords():
         return redirect(url_for("dashboard"))
 
     conn = get_db()
-    with conn.cursor() as cur:
-        cur.execute("SELECT patient_Id FROM rbac.patient WHERE patient_Id = %s", (current_user.id,))
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+        # Validate patient exists
+        cur.execute("SELECT user_Id FROM rbac.patient WHERE user_Id = %s", (current_user.id,))
         result = cur.fetchone()
         if not result:
             flash("Patient profile not found.", "error")
             return redirect(url_for("dashboard"))
 
-        patient_id = result["patient_Id"]
+        patient_id = result["user_Id"]
 
+        # Fetch medical records for the patient
         cur.execute("""
             SELECT mr.record_id, mr.diagnosis, mr.date,
                    d.first_name AS doctor_first_name, d.last_name AS doctor_last_name,
                    p.first_name AS patient_first_name, p.last_name AS patient_last_name
             FROM rbac.medical_record mr
-            JOIN rbac.doctor d ON mr.doctor_id = d.doctor_Id
-            JOIN rbac.patient p ON mr.patient_id = p.patient_Id
+            JOIN rbac.doctor d ON mr.doctor_id = d.user_Id
+            JOIN rbac.patient p ON mr.patient_id = p.user_Id
             WHERE mr.patient_id = %s
             ORDER BY mr.date DESC
         """, (patient_id,))
