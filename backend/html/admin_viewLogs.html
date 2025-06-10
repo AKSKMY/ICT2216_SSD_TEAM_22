@@ -9,7 +9,7 @@
   <thead class="table-light">
     <tr>
       <th>Log ID</th>
-      <th>User ID</th>
+      <th>User</th> <!-- Combined column -->
       <th>Action</th>
       <th>Timestamp</th>
     </tr>
@@ -18,7 +18,7 @@
     {% for log in logs %}
     <tr>
       <td>{{ log.log_id }}</td>
-      <td>{{ log.user_id }}</td>
+      <td>{{ log.user_id }} - {{ log.username }}</td>
       <td>{{ log.action }}</td>
       <td>{{ log.timestamp }}</td>
     </tr>
