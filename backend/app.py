@@ -384,7 +384,7 @@ def view_logs():
 @app.route("/doctor/viewPatients", methods=["GET", "POST"])
 @login_required
 def view_patients():
-    if current_user.role != 'Doctor':
+    if current_user.role != 'Doctor' or not has_permission(current_user.id, "View Medical Records"):
         flash("Access denied.", "error")
         return redirect(url_for("dashboard"))
 
@@ -412,7 +412,7 @@ def view_patients():
 @app.route('/doctor/patientRecords/<int:patient_id>')
 @login_required
 def view_patient_records(patient_id):
-    if current_user.role != 'Doctor':
+    if current_user.role != 'Doctor' or not has_permission(current_user.id, "View Medical Records"):
         flash("Access denied.", "error")
         return redirect(url_for("dashboard"))
 
@@ -438,7 +438,7 @@ def view_patient_records(patient_id):
 @app.route('/doctor/addRecord/<int:patient_id>', methods=['GET', 'POST'])
 @login_required
 def add_medical_record(patient_id):
-    if current_user.role != 'Doctor':
+    if current_user.role != 'Doctor' or not has_permission(current_user.id, "Edit Medical Records"):
         flash("Access denied.", "error")
         return redirect(url_for("dashboard"))
 
@@ -488,7 +488,7 @@ def add_medical_record(patient_id):
 @app.route('/doctor/editRecord/<int:record_id>', methods=['GET', 'POST'])
 @login_required
 def edit_medical_record(record_id):
-    if current_user.role != 'Doctor':
+    if current_user.role != 'Doctor' or not has_permission(current_user.id, "Edit Medical Records"):
         flash("Access denied.", "error")
         return redirect(url_for("dashboard"))
 
@@ -630,7 +630,7 @@ def add_patient():
 @app.route('/user/patientRecords')
 @login_required
 def view_medicalRecords():
-    if current_user.role != 'Patient':
+    if current_user.role != 'Patient' or not has_permission(current_user.id, "View Medical Records"):
         flash("Access denied.", "error")
         return redirect(url_for("dashboard"))
 
