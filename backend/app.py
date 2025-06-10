@@ -54,7 +54,7 @@ def get_db():
         user=app.config["DB_USER"],
         password=app.config["DB_PASSWORD"],
         database=app.config["DB_NAME"],
-        port=12345,
+        port=3306,
         cursorclass=pymysql.cursors.DictCursor
     )
 
@@ -115,6 +115,21 @@ def has_permission(user_id, permission_name):
             LIMIT 1
         """, (user_id, permission_name))
         return cur.fetchone() is not None
+    
+def log_action(user_id, description):
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO rbac.audit_log (user_Id, description)
+                VALUES (%s, %s)
+            """, (user_id, description))
+        conn.commit()
+    except Exception as e:
+        print("Audit log error:", e)
+    finally:
+        conn.close()
+
 
 # ───────────────────────────────────────────────────────
 # ROUTES
@@ -204,6 +219,7 @@ def login():
         if row and check_password_hash(row["password"], password):
             user = User(**row)
             login_user(user)
+            log_action(user.id, f"{user.role} '{user.username}' logged in.")
             if row["role"] == "Patient":
                 return redirect(url_for("dashboard"))
             elif row["role"] == "Admin":
@@ -347,7 +363,22 @@ def create_account():
 @app.route("/admin/viewLogs")
 @login_required
 def view_logs():
-    return render_template("admin_viewLogs.html")
+    if current_user.role != 'Admin':
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+        cur.execute("""
+            SELECT al.log_id, al.user_Id AS user_id, u.username, al.description AS action, al.timestamp
+            FROM rbac.audit_log al
+            JOIN rbac.user u ON al.user_Id = u.user_Id
+            ORDER BY al.timestamp DESC
+        """)
+        logs = cur.fetchall()
+
+    return render_template("admin_viewLogs.html", logs=logs)
+
 
 # Doctor - View patients
 @app.route("/doctor/viewPatients", methods=["GET", "POST"])
@@ -446,6 +477,7 @@ def add_medical_record(patient_id):
                 VALUES (%s, %s, %s, %s)
             """, (patient_id, diagnosis, current_user.id, date_obj))
             conn.commit()
+            log_action(current_user.id, f"Doctor added a medical record for patient ID {patient_id}.")
 
         flash("Medical record added successfully!", "success")
         return redirect(url_for('view_patient_records', patient_id=patient_id))
@@ -501,6 +533,7 @@ def edit_medical_record(record_id):
                 WHERE record_id = %s AND doctor_id = %s
             """, (diagnosis, date_str, record_id, current_user.id))
             conn.commit()
+            log_action(current_user.id, f"Doctor edited medical record ID {record_id}.")
 
         flash("Medical record updated successfully!", "success")
         return redirect(url_for('view_patient_records', patient_id=record['patient_id']))
