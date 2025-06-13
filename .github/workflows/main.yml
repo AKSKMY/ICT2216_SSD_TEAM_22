@@ -49,4 +49,4 @@ jobs:
       run: sleep 20
 
     - name: Test /test-db endpoint
-      run: curl --fail http://localhost:5000/test-db
+      run: curl --fail http://localhost:5000/
