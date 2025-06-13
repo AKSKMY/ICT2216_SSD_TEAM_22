@@ -7,43 +7,74 @@
     <h1 class="mb-4">Welcome, {{ current_user.username }}!</h1>
     <p class="lead">You're logged in as <strong>{{ current_user.role }}</strong>.</p>
 
-    {% if current_user.role == 'Admin' %}
-      <div class="row mt-4">
-        <!-- Card: User Count -->
-        <div class="col-md-4 mb-4">
-          <div class="card shadow-sm">
+    {% if current_user.role == 'Admin' and admin_data %}
+      <div class="row g-4 mb-5">
+        <div class="col-md-3">
+          <div class="card text-bg-primary shadow-sm h-100">
             <div class="card-body">
               <h5 class="card-title">Total Users</h5>
-              <p class="card-text fs-4">1,234</p>
+              <p class="card-text fs-3">{{ admin_data.total_users }}</p>
             </div>
           </div>
         </div>
-
-        <!-- Card: System Logs -->
-        <div class="col-md-4 mb-4">
-          <div class="card shadow-sm">
+        <div class="col-md-3">
+          <div class="card text-bg-info shadow-sm h-100">
             <div class="card-body">
-              <h5 class="card-title">System Logs</h5>
-              <p class="card-text fs-6">View recent activity and access logs</p>
-              <a href="/admin/logs" class="btn btn-outline-primary btn-sm">View Logs</a>
+              <h5 class="card-title">Doctors</h5>
+              <p class="card-text fs-3">{{ admin_data.total_doctors }}</p>
             </div>
           </div>
         </div>
-
-        <!-- Card: Settings -->
-        <div class="col-md-4 mb-4">
-          <div class="card shadow-sm">
+        <div class="col-md-3">
+          <div class="card text-bg-warning shadow-sm h-100">
             <div class="card-body">
-              <h5 class="card-title">Settings</h5>
-              <p class="card-text">Manage platform configuration and policies</p>
-              <a href="/admin/settings" class="btn btn-outline-primary btn-sm">Go to Settings</a>
+              <h5 class="card-title">Nurses</h5>
+              <p class="card-text fs-3">{{ admin_data.total_nurses }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-bg-success shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title">Patients</h5>
+              <p class="card-text fs-3">{{ admin_data.total_patients }}</p>
             </div>
           </div>
         </div>
       </div>
-    {% else %}
-      <div class="alert alert-warning mt-4">
-        <!-- This dashboard is currently only available to administrators. -->
+    {% endif %}
+
+    {% if current_user.role == 'Doctor' and doctor_data %}
+      <div class="row g-4 mb-5">
+        <div class="col-md-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title">Your Patients</h5>
+              <p class="card-text fs-3">{{ doctor_data.total_patients }}</p>
+              <a href="{{ url_for('view_patients') }}" class="btn btn-outline-primary btn-sm mt-2">View Patients</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-8">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title">Recent Medical Records</h5>
+              {% if doctor_data.recent_records %}
+                <ul class="list-group list-group-flush">
+                  {% for record in doctor_data.recent_records %}
+                    <li class="list-group-item">
+                      {{ record.date }} – {{ record.patient_first_name }} {{ record.patient_last_name }}:
+                      <em>{{ record.diagnosis }}</em>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="text-muted">No recent records found.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
       </div>
     {% endif %}
   </div>

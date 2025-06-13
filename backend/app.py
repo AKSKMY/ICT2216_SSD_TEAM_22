@@ -220,15 +220,7 @@ def login():
             user = User(**row)
             login_user(user)
             log_action(user.id, f"{user.role} '{user.username}' logged in.")
-            if row["role"] == "Patient":
-                return redirect(url_for("dashboard"))
-            elif row["role"] == "Admin":
-                return redirect(url_for("view_users"))
-            elif row["role"] == "Doctor":
-                return redirect(url_for("dashboard"))
-            elif row["role"] == "Nurse":
-                return redirect(url_for(""))
-
+            return redirect(url_for("dashboard"))
         else:
             flash("Invalid username or password.", "error")
 
@@ -237,7 +229,63 @@ def login():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html")
+    admin_data = None
+    doctor_data = None
+
+    if current_user.role == "Admin":
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS total FROM user")
+            total_users = cur.fetchone()['total']
+
+            cur.execute("""
+                SELECT r.role_name, COUNT(*) AS count
+                FROM user u
+                JOIN userrole ur ON u.user_Id = ur.user_Id
+                JOIN role r ON ur.role_Id = r.role_Id
+                GROUP BY r.role_name
+            """)
+            role_counts = {row['role_name']: row['count'] for row in cur.fetchall()}
+        conn.close()
+
+        admin_data = {
+            "total_users": total_users,
+            "total_doctors": role_counts.get("Doctor", 0),
+            "total_nurses": role_counts.get("Nurse", 0),
+            "total_patients": role_counts.get("Patient", 0),
+        }
+    elif current_user.role == "Doctor":
+        conn = get_db()
+        with conn.cursor(pymysql.cursors.DictCursor) as cur:
+            # Count assigned patients
+            cur.execute("""
+                SELECT COUNT(*) AS total_patients
+                FROM rbac.patient p
+                JOIN rbac.medical_record mr ON p.user_Id = mr.patient_id
+                WHERE mr.doctor_id = %s
+            """, (current_user.id,))
+            total_patients = cur.fetchone()['total_patients']
+
+            # Recent records added by this doctor
+            cur.execute("""
+                SELECT mr.record_id, mr.diagnosis, mr.date,
+                    p.first_name AS patient_first_name, p.last_name AS patient_last_name
+                FROM rbac.medical_record mr
+                JOIN rbac.patient p ON mr.patient_id = p.user_Id
+                WHERE mr.doctor_id = %s
+                ORDER BY mr.date DESC
+                LIMIT 3
+            """, (current_user.id,))
+            recent_records = cur.fetchall()
+        conn.close()
+
+        doctor_data = {
+            "total_patients": total_patients,
+            "recent_records": recent_records
+        }
+
+    return render_template("dashboard.html", admin_data=admin_data, doctor_data=doctor_data)
+
 
 @app.route("/admin/viewUsers")
 @login_required
