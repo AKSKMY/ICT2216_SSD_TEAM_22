@@ -29,29 +29,30 @@ jobs:
       uses: actions/checkout@v4
 
     # ---------------------------
-    # 1. Dependency Check
+    # 1. Dependency Check (Docker)
     # ---------------------------
-    - name: Download OWASP Dependency-Check
+    - name: Run OWASP Dependency Check with Docker
       run: |
-        curl -L -o dc.zip https://github.com/jeremylong/DependencyCheck/releases/download/v9.0.10/dependency-check-9.0.10-release.zip
-        unzip -q dc.zip -d dc
+        mkdir -p odc-reports odc-data
+        docker pull owasp/dependency-check
 
-    - name: Run Dependency Check on backend
-      run: |
-        ./dc/dependency-check/bin/dependency-check.sh \
-          --project "MediVault Python Backend" \
-          --scan ./backend \
+        docker run --rm \
+          -v ${{ github.workspace }}/backend:/src \
+          -v ${{ github.workspace }}/odc-reports:/report \
+          -v ${{ github.workspace }}/odc-data:/usr/share/dependency-check/data \
+          owasp/dependency-check \
+          --scan /src \
           --format HTML \
-          --out ./dependency-check-report
+          --out /report
 
-    - name: Upload Dependency Report
+    - name: Upload Dependency Check Report
       uses: actions/upload-artifact@v4
       with:
-        name: dependency-check-report
-        path: dependency-check-report
+        name: Dependency-Check-Report
+        path: odc-reports
 
     # ---------------------------
-    # 2. Build & Run Flask app
+    # 2. Flask App Setup & API Tests
     # ---------------------------
     - name: Build Docker image
       run: docker build -t medivault-app .
