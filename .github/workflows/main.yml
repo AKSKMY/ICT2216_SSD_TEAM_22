@@ -1,4 +1,4 @@
-name: Flask App Test
+name: Flask App CI Test
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
           --health-retries=20
 
     steps:
-    - name: Checkout repo
+    - name: Checkout repository
       uses: actions/checkout@v3
 
     - name: Set up Python
@@ -29,19 +29,21 @@ jobs:
       with:
         python-version: 3.11
 
-    - name: Create .env file
-      run: |
-        echo "FLASK_SECRET_KEY=testsecret" >> .env
-        echo "FLASK_ENV=development" >> .env
-        echo "DB_HOST=mysql" >> .env
-        echo "DB_USER=root" >> .env
-        echo "DB_PASSWORD=admin" >> .env
-        echo "DB_NAME=rbac" >> .env
-
-    - name: Change to backend directory
+    - name: Install dependencies
       working-directory: ./backend
       run: |
         pip install -r requirements.txt || pip install flask flask-login pymysql python-dotenv
+
+    - name: Run Flask app in background
+      working-directory: ./backend
+      env:
+        FLASK_SECRET_KEY: testsecret
+        FLASK_ENV: development
+        DB_HOST: mysql             # ✅ Important!
+        DB_USER: root
+        DB_PASSWORD: admin
+        DB_NAME: rbac
+      run: |
         python app.py &
         sleep 20
 
