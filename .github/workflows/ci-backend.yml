@@ -28,26 +28,31 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install OWASP Dependency Check
+    # ---------------------------
+    # 1. Dependency Check
+    # ---------------------------
+    - name: Download OWASP Dependency-Check
       run: |
-        wget https://github.com/jeremylong/DependencyCheck/releases/download/v9.0.10/dependency-check-9.0.10-release.zip
-        unzip dependency-check-9.0.10-release.zip -d dependency-check
-        chmod +x dependency-check/bin/dependency-check.sh
+        curl -L -o dc.zip https://github.com/jeremylong/DependencyCheck/releases/download/v9.0.10/dependency-check-9.0.10-release.zip
+        unzip -q dc.zip -d dc
 
     - name: Run Dependency Check on backend
       run: |
-        ./dependency-check/bin/dependency-check.sh \
+        ./dc/dependency-check/bin/dependency-check.sh \
           --project "MediVault Python Backend" \
           --scan ./backend \
           --format HTML \
           --out ./dependency-check-report
 
-    - name: Upload Dependency Check Report
+    - name: Upload Dependency Report
       uses: actions/upload-artifact@v4
       with:
         name: dependency-check-report
         path: dependency-check-report
 
+    # ---------------------------
+    # 2. Build & Run Flask app
+    # ---------------------------
     - name: Build Docker image
       run: docker build -t medivault-app .
 
@@ -69,17 +74,20 @@ jobs:
     - name: Wait for Flask to boot
       run: sleep 20
 
-    - name: Test root endpoint
+    - name: Test `/` endpoint
       run: curl --fail http://localhost:5000/
 
-    - name: Test /test-db endpoint
+    - name: Test `/test-db` endpoint
       run: curl --fail http://localhost:5000/test-db
 
-    - name: Install Chromium & requirements.txt
+    # ---------------------------
+    # 3. Selenium UI Test
+    # ---------------------------
+    - name: Install Chromium and Python dependencies
       run: |
         sudo apt update
         sudo apt install -y chromium-browser chromium-chromedriver
         pip install -r backend/requirements.txt
 
-    - name: Run Selenium UI Test
+    - name: Run Selenium UI test for /register
       run: python backend/tests/test_register_ui.py
