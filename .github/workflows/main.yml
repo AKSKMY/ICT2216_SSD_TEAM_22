@@ -38,12 +38,10 @@ jobs:
         echo "DB_PASSWORD=admin" >> .env
         echo "DB_NAME=rbac" >> .env
 
-    - name: Install dependencies
+    - name: Change to backend directory
+      working-directory: ./backend
       run: |
         pip install -r requirements.txt || pip install flask flask-login pymysql python-dotenv
-
-    - name: Run Flask app in background
-      run: |
         python app.py &
         sleep 20
 
