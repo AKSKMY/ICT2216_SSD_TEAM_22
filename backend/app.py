@@ -1,4 +1,5 @@
 import os
+import re
 from dotenv import load_dotenv
 load_dotenv()  # loads .env file automatically
 import pymysql
@@ -158,7 +159,7 @@ def register():
     if request.method == "POST":
         # User Table
         username = request.form.get("username", "").strip()
-        email = request.form.get("email", "")
+        email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
 
         # Patient Table
@@ -167,6 +168,45 @@ def register():
         gender = request.form.get("gender", "")
         date_of_birth_str = request.form.get("date_of_birth")
         age = request.form.get('age', '').strip()
+
+        # Regex
+        username_regex = r"^[a-zA-Z0-9_]{3,20}$"
+        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+
+        # Validation
+        if not re.match(username_regex, username):
+            flash("Username must be 3–20 characters long and alphanumeric (underscores allowed).", "error")
+            return render_template("register.html")
+
+        if not re.match(email_regex, email):
+            flash("Please enter a valid email address.", "error")
+            return render_template("register.html")
+
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long.", "error")
+            return render_template("register.html")
+
+        if not first_name or not last_name:
+            flash("First name and last name are required.", "error")
+            return render_template("register.html")
+
+        if gender not in {"Male", "Female", "Other"}:
+            flash("Please select a valid gender.", "error")
+            return render_template("register.html")
+
+        if not age.isdigit() or int(age) < 0:
+            flash("Age must be a positive number.", "error")
+            return render_template("register.html")
+
+        # Validate date format
+        try:
+            date_obj = datetime.strptime(date_of_birth_str, "%Y-%m-%d").date()
+            if date_obj > date.today():
+                flash("Date of birth cannot be in the future.", "error")
+                return render_template("register.html")
+        except ValueError:
+            flash("Invalid date format. Use YYYY-MM-DD.", "error")
+            return render_template("register.html")
 
         conn = get_db()
         try:
@@ -195,7 +235,7 @@ def register():
                     INSERT INTO patient (user_Id, first_name, last_name, gender, data_of_birth, age)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     """,
-                    (user_id, first_name, last_name, gender, date_of_birth_str, age)
+                    (user_id, first_name, last_name, gender, date_of_birth_str, int(age))
                 )
 
                 conn.commit()
@@ -335,6 +375,18 @@ def edit_user(user_id):
         if request.method == "POST":
             username = request.form.get("username", "").strip()
             email = request.form.get("email", "").strip()
+
+            # Validate fields
+            if not username or not email:
+                flash("Username and email are required.", "error")
+                return redirect(request.url)
+
+            # Check email format with regex
+            email_regex = r"^[^@]+@[^@]+\.[^@]+$"
+            if not re.match(email_regex, email):
+                flash("Invalid email format.", "error")
+                return redirect(request.url)
+    
             cur.execute("UPDATE user SET username = %s, email = %s WHERE user_Id = %s",
                         (username, email, user_id))
             conn.commit()
@@ -394,17 +446,25 @@ def create_account():
         age = request.form.get("age", "").strip()
         gender = request.form.get("gender", "").strip()
 
+        # Regex
+        username_regex = r"^[a-zA-Z0-9_]{3,20}$"
+        email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+
         # Basic validation
         if not username or not email or not password or not role_name:
             flash("All fields are required.", "error")
             return render_template("admin_createAccount.html")
+        
+        if not re.match(username_regex, username):
+            flash("Username must be 3–20 characters long and alphanumeric (underscores allowed).", "error")
+            return render_template("admin_createAccount.html")
+        
+        if not re.match(email_regex, email):
+            flash("Please enter a valid email address.", "error")
+            return render_template("admin_createAccount.html")
 
         if len(password) < 8:
             flash("Password must be at least 8 characters.", "error")
-            return render_template("admin_createAccount.html")
-
-        if "@" not in email or "." not in email.split("@")[-1]:
-            flash("Invalid email format.", "error")
             return render_template("admin_createAccount.html")
 
         valid_roles = {"Doctor", "Nurse"}
@@ -412,21 +472,17 @@ def create_account():
             flash("Invalid role selected.", "error")
             return render_template("admin_createAccount.html")
 
-        # Staff-specific validation
-        if role_name in valid_roles:
-            if not first_name or not last_name or not age or not gender:
-                flash("All staff fields are required for Doctor/Nurse.", "error")
-                return render_template("admin_createAccount.html")
+        if not first_name or not last_name or not age or not gender:
+            flash("All staff fields are required for Doctor/Nurse.", "error")
+            return render_template("admin_createAccount.html")
 
-            if not age.isdigit() or int(age) < 0:
-                flash("Age must be a valid positive number.", "error")
-                return render_template("admin_createAccount.html")
+        if not age.isdigit() or int(age) < 0:
+            flash("Age must be a valid positive number.", "error")
+            return render_template("admin_createAccount.html")
 
-            if gender not in {"Male", "Female", "Other"}:
-                flash("Invalid gender selected.", "error")
-                return render_template("admin_createAccount.html")
-
-            age = int(age)
+        if gender not in {"Male", "Female", "Other"}:
+            flash("Please select a valid gender.", "error")
+            return render_template("admin_createAccount.html")
 
         conn = get_db()
         try:
@@ -458,11 +514,11 @@ def create_account():
                 if role_name == "Doctor":
                     cur.execute("""INSERT INTO rbac.doctor (user_Id, first_name, last_name, age, gender)
                                    VALUES (%s, %s, %s, %s, %s)""",
-                                (user_id, first_name, last_name, age, gender))
+                                (user_id, first_name, last_name, int(age), gender))
                 elif role_name == "Nurse":
                     cur.execute("""INSERT INTO rbac.nurse (user_Id, first_name, last_name, age, gender)
                                    VALUES (%s, %s, %s, %s, %s)""",
-                                (user_id, first_name, last_name, age, gender))
+                                (user_id, first_name, last_name, int(age), gender))
 
                 conn.commit()
                 flash(f"{role_name} account created successfully!", "success")
@@ -476,7 +532,7 @@ def create_account():
     return render_template("admin_createAccount.html")
 
 
-
+# Admin - View Audit Logs
 @app.route("/admin/viewLogs")
 @login_required
 def view_logs():
