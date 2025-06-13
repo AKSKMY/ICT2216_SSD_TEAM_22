@@ -367,38 +367,90 @@ def create_account():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
+        # Basic fields
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
         role_name = request.form.get("role", "").strip()
 
+        # Extra fields for staff
+        first_name = request.form.get("first_name", "").strip()
+        last_name = request.form.get("last_name", "").strip()
+        age = request.form.get("age", "").strip()
+        gender = request.form.get("gender", "").strip()
+
+        # Basic validation
         if not username or not email or not password or not role_name:
             flash("All fields are required.", "error")
             return render_template("admin_createAccount.html")
 
+        if len(password) < 8:
+            flash("Password must be at least 8 characters.", "error")
+            return render_template("admin_createAccount.html")
+
+        if "@" not in email or "." not in email.split("@")[-1]:
+            flash("Invalid email format.", "error")
+            return render_template("admin_createAccount.html")
+
+        valid_roles = {"Doctor", "Nurse"}
+        if role_name not in valid_roles:
+            flash("Invalid role selected.", "error")
+            return render_template("admin_createAccount.html")
+
+        # Staff-specific validation
+        if role_name in valid_roles:
+            if not first_name or not last_name or not age or not gender:
+                flash("All staff fields are required for Doctor/Nurse.", "error")
+                return render_template("admin_createAccount.html")
+
+            if not age.isdigit() or int(age) < 0:
+                flash("Age must be a valid positive number.", "error")
+                return render_template("admin_createAccount.html")
+
+            if gender not in {"Male", "Female", "Other"}:
+                flash("Invalid gender selected.", "error")
+                return render_template("admin_createAccount.html")
+
+            age = int(age)
+
         conn = get_db()
         try:
             with conn.cursor() as cur:
+                # Check username uniqueness
                 cur.execute("SELECT 1 FROM user WHERE username = %s", (username,))
                 if cur.fetchone():
                     flash("Username already exists.", "error")
                     return render_template("admin_createAccount.html")
 
+                # Get role ID
                 cur.execute("SELECT role_Id FROM role WHERE role_name = %s", (role_name,))
                 role_row = cur.fetchone()
                 if not role_row:
-                    flash("Invalid role selected.", "error")
+                    flash("Role lookup failed.", "error")
                     return render_template("admin_createAccount.html")
                 role_id = role_row["role_Id"]
 
+                # Insert into user table
                 hashed_pw = generate_password_hash(password)
                 cur.execute("INSERT INTO user (username, email, password) VALUES (%s, %s, %s)",
                             (username, email, hashed_pw))
                 user_id = cur.lastrowid
-                cur.execute("INSERT INTO userrole (user_Id, role_Id) VALUES (%s, %s)",
-                            (user_id, role_id))
+
+                # Insert into userrole table
+                cur.execute("INSERT INTO userrole (user_Id, role_Id) VALUES (%s, %s)", (user_id, role_id))
+
+                # Insert into staff table
+                if role_name == "Doctor":
+                    cur.execute("""INSERT INTO rbac.doctor (user_Id, first_name, last_name, age, gender)
+                                   VALUES (%s, %s, %s, %s, %s)""",
+                                (user_id, first_name, last_name, age, gender))
+                elif role_name == "Nurse":
+                    cur.execute("""INSERT INTO rbac.nurse (user_Id, first_name, last_name, age, gender)
+                                   VALUES (%s, %s, %s, %s, %s)""",
+                                (user_id, first_name, last_name, age, gender))
+
                 conn.commit()
-                flash("Staff account created successfully.", "success")
+                flash(f"{role_name} account created successfully!", "success")
         except Exception as e:
             conn.rollback()
             flash("Error creating account.", "error")
@@ -407,6 +459,8 @@ def create_account():
             conn.close()
 
     return render_template("admin_createAccount.html")
+
+
 
 @app.route("/admin/viewLogs")
 @login_required
