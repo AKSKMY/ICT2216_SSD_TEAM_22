@@ -13,6 +13,8 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: admin
+          MYSQL_USER: root
+          MYSQL_PASSWORD: admin
           MYSQL_DATABASE: rbac
         ports:
           - 3306:3306
