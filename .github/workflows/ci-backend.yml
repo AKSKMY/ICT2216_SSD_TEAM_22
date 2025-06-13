@@ -1,0 +1,85 @@
+name: MediVault Full CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  full-test:
+    runs-on: ubuntu-22.04
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: admin
+          MYSQL_DATABASE: rbac
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install OWASP Dependency Check
+      run: |
+        wget https://github.com/jeremylong/DependencyCheck/releases/download/v9.0.10/dependency-check-9.0.10-release.zip
+        unzip dependency-check-9.0.10-release.zip -d dependency-check
+        chmod +x dependency-check/bin/dependency-check.sh
+
+    - name: Run Dependency Check on backend
+      run: |
+        ./dependency-check/bin/dependency-check.sh \
+          --project "MediVault Python Backend" \
+          --scan ./backend \
+          --format HTML \
+          --out ./dependency-check-report
+
+    - name: Upload Dependency Check Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: dependency-check-report
+        path: dependency-check-report
+
+    - name: Build Docker image
+      run: docker build -t medivault-app .
+
+    - name: Run Flask container
+      run: |
+        docker run -d --name flask-app \
+          --network host \
+          -v ${{ github.workspace }}/backend:/app \
+          -w /app \
+          -e FLASK_SECRET_KEY=testsecret \
+          -e FLASK_ENV=development \
+          -e DB_HOST=127.0.0.1 \
+          -e DB_USER=root \
+          -e DB_PASSWORD=admin \
+          -e DB_NAME=rbac \
+          medivault-app \
+          python app.py
+
+    - name: Wait for Flask to boot
+      run: sleep 20
+
+    - name: Test root endpoint
+      run: curl --fail http://localhost:5000/
+
+    - name: Test /test-db endpoint
+      run: curl --fail http://localhost:5000/test-db
+
+    - name: Install Chromium & requirements.txt
+      run: |
+        sudo apt update
+        sudo apt install -y chromium-browser chromium-chromedriver
+        pip install -r backend/requirements.txt
+
+    - name: Run Selenium UI Test
+      run: python backend/tests/test_register_ui.py
