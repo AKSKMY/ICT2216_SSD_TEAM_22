@@ -6,26 +6,77 @@
 <h2 class="mb-4">Create New Staff Account</h2>
 
 <form method="POST">
-  <div class="mb-3">
-    <label for="username" class="form-label">Username</label>
-    <input type="text" name="username" class="form-control" id="username" required>
+  <div class="row">
+    <!-- Left Card: Account Credentials -->
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Account Credentials</h5>
+
+          <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" name="username" class="form-control" id="username" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" id="email" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" name="password" class="form-control" id="password" required minlength="6">
+          </div>
+
+          <div class="mb-3">
+            <label for="role" class="form-label">Role</label>
+            <select class="form-select" name="role" id="role" required>
+              <option value="">Select Role</option>
+              <option value="Doctor">Doctor</option>
+              <option value="Nurse">Nurse</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Card: Additional Staff Info -->
+    <div class="col-md-6">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Staff Information</h5>
+
+          <div class="mb-3">
+            <label for="first_name" class="form-label">First Name</label>
+            <input type="text" name="first_name" class="form-control" id="first_name">
+          </div>
+
+          <div class="mb-3">
+            <label for="last_name" class="form-label">Last Name</label>
+            <input type="text" name="last_name" class="form-control" id="last_name">
+          </div>
+
+          <div class="mb-3">
+            <label for="age" class="form-label">Age</label>
+            <input type="number" name="age" class="form-control" id="age" min="0">
+          </div>
+
+          <div class="mb-3">
+            <label for="gender" class="form-label">Gender</label>
+            <select name="gender" class="form-select" id="gender">
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="mb-3">
-    <label for="email" class="form-label">Email</label>
-    <input type="email" name="email" class="form-control" id="email" required>
+
+  <div class="text-end">
+    <button type="submit" class="btn btn-success">Create Account</button>
   </div>
-  <div class="mb-3">
-    <label for="password" class="form-label">Password</label>
-    <input type="password" name="password" class="form-control" id="password" required>
-  </div>
-  <div class="mb-3">
-    <label for="role" class="form-label">Role</label>
-    <select class="form-select" name="role" id="role" required>
-      <option value="">Select Role</option>
-      <option value="Doctor">Doctor</option>
-      <option value="Nurse">Nurse</option>
-    </select>
-  </div>
-  <button type="submit" class="btn btn-success">Create Account</button>
 </form>
 {% endblock %}
