@@ -1,4 +1,4 @@
-name: MediVault Full CI
+name: MediVault Main CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  full-test:
+  flask-and-ui-test:
     runs-on: ubuntu-22.04
 
     services:
@@ -28,33 +28,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    # ---------------------------
-    # 1. Dependency Check (Docker)
-    # ---------------------------
-    - name: Run OWASP Dependency Check with Docker
-      run: |
-        mkdir -p odc-reports odc-data
-        docker pull owasp/dependency-check
-
-        docker run --rm \
-          -v ${{ github.workspace }}/backend:/src \
-          -v ${{ github.workspace }}/odc-reports:/report \
-          -v ${{ github.workspace }}/odc-data:/usr/share/dependency-check/data \
-          owasp/dependency-check \
-          --scan /src \
-          --format HTML \
-          --out /report
-
-    - name: Upload Dependency Check Report
-      uses: actions/upload-artifact@v4
-      with:
-        name: Dependency-Check-Report
-        path: odc-reports
-
-    # ---------------------------
-    # 2. Flask App Setup & API Tests
-    # ---------------------------
-    - name: Build Docker image
+    - name: Build Docker image for Flask
       run: docker build -t medivault-app .
 
     - name: Run Flask container
@@ -72,7 +46,7 @@ jobs:
           medivault-app \
           python app.py
 
-    - name: Wait for Flask to boot
+    - name: Wait for Flask app to boot
       run: sleep 20
 
     - name: Test `/` endpoint
@@ -81,10 +55,7 @@ jobs:
     - name: Test `/test-db` endpoint
       run: curl --fail http://localhost:5000/test-db
 
-    # ---------------------------
-    # 3. Selenium UI Test
-    # ---------------------------
-    - name: Install Chromium and Python dependencies
+    - name: Install Chromium and test dependencies
       run: |
         sudo apt update
         sudo apt install -y chromium-browser chromium-chromedriver
