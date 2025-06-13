@@ -156,9 +156,17 @@ def register():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
+        # User Table
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "")
         password = request.form.get("password", "")
+
+        # Patient Table
+        first_name = request.form.get("first_name", "")
+        last_name = request.form.get("last_name", "")
+        gender = request.form.get("gender", "")
+        date_of_birth_str = request.form.get("date_of_birth")
+        age = request.form.get('age', '').strip()
 
         conn = get_db()
         try:
@@ -182,6 +190,13 @@ def register():
                 user_id = cur.lastrowid
 
                 cur.execute("INSERT INTO userrole (user_Id, role_Id) VALUES (%s, %s)", (user_id, role_id))
+                cur.execute(
+                    """
+                    INSERT INTO patient (user_Id, first_name, last_name, gender, data_of_birth, age)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    """,
+                    (user_id, first_name, last_name, gender, date_of_birth_str, age)
+                )
 
                 conn.commit()
                 flash("Registration successful. Please log in.", "success")
@@ -646,9 +661,6 @@ def edit_medical_record(record_id):
 @app.route('/doctor/addPatient', methods=['GET', 'POST'])
 @login_required
 def add_patient():
-    if current_user.role != 'Doctor':
-        flash("Access denied.", "error")
-        return redirect(url_for("dashboard"))
 
     conn = get_db()
     with conn.cursor() as cur:
@@ -685,15 +697,6 @@ def add_patient():
         if not any(u['user_Id'] == user_id_int for u in patient_users):
             flash("Selected user is invalid or already a patient.", "error")
             return redirect(request.url)
-
-        # Validate age
-        if age:
-            if not age.isdigit() or int(age) < 0:
-                flash("Age must be a positive integer.", "error")
-                return redirect(request.url)
-            age = int(age)
-        else:
-            age = None
 
         # Validate gender
         valid_genders = {'Male', 'Female', 'Other'}
