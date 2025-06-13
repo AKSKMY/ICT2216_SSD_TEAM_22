@@ -33,7 +33,7 @@ jobs:
       run: |
         echo "FLASK_SECRET_KEY=testsecret" >> .env
         echo "FLASK_ENV=development" >> .env
-        echo "DB_HOST=127.0.0.1" >> .env
+        echo "DB_HOST=mysql" >> .env
         echo "DB_USER=root" >> .env
         echo "DB_PASSWORD=admin" >> .env
         echo "DB_NAME=rbac" >> .env
