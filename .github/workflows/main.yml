@@ -1,4 +1,4 @@
-name: Flask Docker CI Test
+name: Flask App CI Docker Test
 
 on:
   push:
@@ -14,35 +14,38 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: admin
           MYSQL_DATABASE: rbac
+        ports:
+          - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=20
-        ports:
-          - 3306:3306
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Build Flask app Docker image
-      working-directory: ./backend
-      run: docker build -t medivault-app .
+    - name: Build Flask Docker image
+      run: |
+        docker build -t medivault-app .
 
-    - name: Run Flask app container
+    - name: Run Flask container (background)
       run: |
         docker run -d --name flask-app \
           --network host \
+          -v ${{ github.workspace }}/backend:/app \
+          -w /app \
           -e FLASK_SECRET_KEY=testsecret \
           -e FLASK_ENV=development \
           -e DB_HOST=127.0.0.1 \
           -e DB_USER=root \
           -e DB_PASSWORD=admin \
           -e DB_NAME=rbac \
-          medivault-app
+          medivault-app \
+          python app.py
 
-    - name: Wait for app to become available
+    - name: Wait for Flask to boot
       run: sleep 20
 
     - name: Test /test-db endpoint
