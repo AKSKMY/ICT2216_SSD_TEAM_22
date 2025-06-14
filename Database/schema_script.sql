@@ -41,7 +41,7 @@ DROP TABLE IF EXISTS `rbac`.`audit_log` ;
 
 CREATE TABLE IF NOT EXISTS `rbac`.`audit_log` (
   `log_id` INT NOT NULL AUTO_INCREMENT,
-  `user_Id` INT NOT NULL,
+  `user_Id` INT NULL DEFAULT NULL,
   `timestamp` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `description` TEXT NOT NULL,
   PRIMARY KEY (`log_id`),

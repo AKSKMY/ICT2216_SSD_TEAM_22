@@ -4,6 +4,10 @@ from dotenv import load_dotenv
 load_dotenv()  # loads .env file automatically
 import pymysql
 from datetime import datetime, date
+import hashlib
+import requests
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from flask import (
     Flask, send_from_directory, render_template,
@@ -29,6 +33,13 @@ app = Flask(
     template_folder=html_folder,
     static_folder=static_folder,
     static_url_path="/static"
+)
+
+# Default Limiter
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"]  # default for all routes
 )
 
 # Decide which config to load based on FLASK_ENV env variable
@@ -131,6 +142,16 @@ def log_action(user_id, description):
     finally:
         conn.close()
 
+def is_password_pwned(password):
+    sha1 = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
+    prefix = sha1[:5]
+    suffix = sha1[5:]
+    url = f"https://api.pwnedpasswords.com/range/{prefix}"
+    response = requests.get(url)
+    if response.status_code != 200:
+        return False  # Assume safe if the API fails
+    hashes = (line.split(":") for line in response.text.splitlines())
+    return any(s == suffix for s, _ in hashes)
 
 # ───────────────────────────────────────────────────────
 # ROUTES
@@ -152,6 +173,7 @@ def serve_index():
     return render_template("index.html")
 
 @app.route("/register", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def register():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
@@ -185,6 +207,11 @@ def register():
         if len(password) < 8:
             flash("Password must be at least 8 characters long.", "error")
             return render_template("register.html")
+        
+        # To check if password is breached
+        if is_password_pwned(password):
+            flash("This password has appeared in a data breach. Please choose another.", "error")
+            return render_template("admin_createAccount.html")
 
         if not first_name or not last_name:
             flash("First name and last name are required.", "error")
@@ -251,13 +278,30 @@ def register():
     return render_template("register.html")
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
+        ip = request.remote_addr
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+        
+        # Input Validtion
+        username_regex = r"^[a-zA-Z0-9_.]{3,30}$"
+        
+        if not username or not password:
+            flash("Username and password are required.", "error")
+            return render_template("login.html")
+
+        if not re.match(username_regex, username):
+            flash("Invalid username format.", "error")
+            return render_template("login.html")
+
+        # if len(password) < 8:
+        #     flash("Password must be at least 8 characters.", "error")
+        #     return render_template("login.html")
 
         conn = get_db()
         with conn.cursor() as cur:
@@ -277,6 +321,7 @@ def login():
             log_action(user.id, f"{user.role} '{user.username}' logged in.")
             return redirect(url_for("dashboard"))
         else:
+            log_action(None, f"Login attempt from IP {ip} for username '{username}'")
             flash("Invalid username or password.", "error")
 
     return render_template("login.html")
@@ -562,6 +607,11 @@ def view_patients():
         return redirect(url_for("dashboard"))
 
     search_query = request.args.get("search", "").strip()
+    
+    # Input validation: only allow letters, spaces, hyphens, apostrophes
+    if search_query and not re.match(r"^[a-zA-Z\s\-']{1,50}$", search_query):
+        flash("Invalid characters in search. Only letters and basic punctuation are allowed.", "error")
+        return redirect(url_for("view_patients"))
 
     conn = get_db()
     with conn.cursor() as cur:
@@ -820,8 +870,6 @@ def view_medicalRecords():
         records = cur.fetchall()
 
     return render_template('medicalRecord.html', records=records)
-
-
 
 # logout
 @app.route("/logout")
