@@ -1,7 +1,25 @@
-How do i incorporate PyOTP for email / QR code into this?
+# ───────────────────────────────────────────────────────────────────────────────
+# Dockerfile  (place this at the *root* of ICT2216_SSD_TEAM_22/)
+# ───────────────────────────────────────────────────────────────────────────────
 
-I also happen to preload some accounts, so if i put the QR code for google authenticator directly after register, my pre-loaded acc wont have a chance to even generate a QR code, so i was thinking of putting into a separate tab, sort of like a profile page for them to revisit anytime
+# 1) Create /app directory and switch working directory
+WORKDIR /app
 
-            user = User(**row)
-            login_user(user)
-            log_action(user.id, f"{user.role} '{user.username}' logged in.")
+# 2) Copy only requirements.txt (caching layer)
+COPY ./backend/requirements.txt /app/requirements.txt
+
+# 3) Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 4) Copy the entire "backend" folder into /app
+#    This includes app.py, config.py, html/, static/, etc.
+COPY ./backend /app
+
+# 5) Expose port 5000 (Gunicorn will listen here)
+EXPOSE 5000
+
+# 6) Default environment = production (can be overridden)
+ENV FLASK_ENV=production
+
+# 7) Launch Gunicorn, binding to 0.0.0.0:5000, serving "app:app"
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
