@@ -10,3 +10,4 @@ cryptography
 selenium
 requests==2.31.0
 flask-limiter==3.11.0
+Flask-Mail

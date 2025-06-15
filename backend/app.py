@@ -5,13 +5,15 @@ load_dotenv()  # loads .env file automatically
 import pymysql
 from datetime import datetime, date
 import hashlib
+import random
 import requests
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_mail import Mail, Message
 
 from flask import (
     Flask, send_from_directory, render_template,
-    request, redirect, url_for, flash
+    request, redirect, url_for, flash, session
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import (
@@ -34,6 +36,16 @@ app = Flask(
     static_folder=static_folder,
     static_url_path="/static"
 )
+
+# Flask-Mail config (using environment variables)
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'true') == 'true'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
+mail = Mail(app)
 
 # Default Limiter
 limiter = Limiter(
@@ -74,14 +86,10 @@ def get_db():
 # USER MODEL
 # ───────────────────────────────────────────────────────
 class User(UserMixin):
-    def __init__(self, user_Id, username, password, role):
+    def __init__(self, user_Id, username, role):
         self.id = user_Id
         self.username = username
-        self.password = password
         self.role = role
-
-    def check_password(self, plain_password):
-        return check_password_hash(self.password, plain_password)
 
     def get_id(self):
         return str(self.id)
@@ -91,7 +99,7 @@ def load_user(user_id):
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute("""
-            SELECT u.user_Id, u.username, u.password, r.role_name AS role
+            SELECT u.user_Id, u.username, r.role_name AS role
             FROM user u
             JOIN userrole ur ON u.user_Id = ur.user_Id
             JOIN role r ON ur.role_Id = r.role_Id
@@ -100,7 +108,7 @@ def load_user(user_id):
         row = cur.fetchone()
     conn.close()
     if row:
-        return User(**row)
+        return User(row["user_Id"], row["username"], row["role"])
     return None
 
 # ───────────────────────────────────────────────────────
@@ -204,10 +212,6 @@ def register():
             flash("Please enter a valid email address.", "error")
             return render_template("register.html")
 
-        if len(password) < 8:
-            flash("Password must be at least 8 characters long.", "error")
-            return render_template("register.html")
-        
         # To check if password is breached
         if is_password_pwned(password):
             flash("This password has appeared in a data breach. Please choose another.", "error")
@@ -299,14 +303,10 @@ def login():
             flash("Invalid username format.", "error")
             return render_template("login.html")
 
-        # if len(password) < 8:
-        #     flash("Password must be at least 8 characters.", "error")
-        #     return render_template("login.html")
-
         conn = get_db()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT u.user_Id, u.username, u.password, r.role_name AS role
+                SELECT u.user_Id, u.username, u.email, u.password, r.role_name AS role
                 FROM user u
                 JOIN userrole ur ON u.user_Id = ur.user_Id
                 JOIN role r ON ur.role_Id = r.role_Id
@@ -316,15 +316,107 @@ def login():
         conn.close()
 
         if row and check_password_hash(row["password"], password):
-            user = User(**row)
-            login_user(user)
-            log_action(user.id, f"{user.role} '{user.username}' logged in.")
-            return redirect(url_for("dashboard"))
+            # Generate OTP
+            otp = str(random.randint(100000, 999999))
+            session["pending_user"] = {
+                "user_Id": row["user_Id"],
+                "username": row["username"],
+                "role": row["role"],
+                "email": row["email"]
+            }
+            session["email_otp"] = otp
+            session["otp_expiry"] = datetime.utcnow().timestamp() + 300  # 5 minutes
+
+            # Send email
+            try:
+                msg = Message("Your MediVault OTP Code", recipients=[row["email"]])
+                msg.body = f"Your OTP is: {otp}. It expires in 5 minutes."
+                mail.send(msg)
+                flash("An OTP has been sent to your email.", "success")
+            except Exception as e:
+                print("Email error:", e)
+                flash("Failed to send OTP. Please try again.", "error")
+                return render_template("login.html")
+            return redirect(url_for("verify_otp"))
         else:
             log_action(None, f"Login attempt from IP {ip} for username '{username}'")
             flash("Invalid username or password.", "error")
 
     return render_template("login.html")
+
+
+@app.route("/verify-otp", methods=["GET", "POST"])
+def verify_otp():
+    if "pending_user" not in session:
+        flash("Session expired. Please log in again.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        user_otp = request.form.get("otp", "")
+        actual_otp = session.get("email_otp")
+        expiry = session.get("otp_expiry", 0)
+
+        if datetime.utcnow().timestamp() > expiry:
+            flash("OTP has expired. Please log in again.", "error")
+            session.clear()
+            return redirect(url_for("login"))
+
+        if user_otp == actual_otp:
+            user_data = session["pending_user"]
+            user = User(
+                user_Id=user_data["user_Id"],
+                username=user_data["username"],
+                role=user_data["role"]
+            )
+            login_user(user)
+
+            session.pop("pending_user", None)
+            session.pop("email_otp", None)
+            session.pop("otp_expiry", None)
+
+            flash("Login successful!", "success")
+            return redirect(url_for("dashboard"))
+        else:
+            flash("Incorrect OTP. Please try again.", "error")
+
+    return render_template("verify_otp.html")
+
+@limiter.limit("3 per 10 minutes")
+@app.route("/resend-otp", methods=["POST"])
+def resend_otp():
+    if "pending_user" not in session:
+        flash("Session expired. Please log in again.", "error")
+        return redirect(url_for("login"))
+
+    # Generate new OTP
+    otp = str(random.randint(100000, 999999))
+    session["email_otp"] = otp
+    session["otp_expiry"] = datetime.utcnow().timestamp() + 300  # 5 minutes
+
+    # Send email
+    user_email = session.get("email") or session["pending_user"].get("email")  # In case you store email later
+    if not user_email:
+        # Refetch from DB if not stored
+        user_id = session["pending_user"]["user_Id"]
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("SELECT email FROM user WHERE user_Id = %s", (user_id,))
+            result = cur.fetchone()
+            if result:
+                user_email = result["email"]
+        conn.close()
+
+    try:
+        msg = Message("Your MediVault OTP Code", recipients=[user_email])
+        msg.body = f"Your new OTP is: {otp}. It expires in 5 minutes."
+        mail.send(msg)
+        flash("A new OTP has been sent to your email.", "success")
+    except Exception as e:
+        print("Resend OTP error:", e)
+        flash("Failed to resend OTP. Please try again.", "error")
+
+    return redirect(url_for("verify_otp"))
+
 
 @app.route("/dashboard")
 @login_required

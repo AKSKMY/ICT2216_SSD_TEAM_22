@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Verify OTP - MediVault{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <h2 class="mb-4 text-primary">Email Verification</h2>
+    <p class="text-muted">Enter the 6-digit OTP sent to your email.</p>
+
+    <!-- OTP Verification Form -->
+    <form method="POST" action="{{ url_for('verify_otp') }}">
+      <div class="mb-3">
+        <label for="otp" class="form-label">One-Time Password</label>
+        <input type="text" name="otp" id="otp" class="form-control" maxlength="6" required>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center">
+        <button type="button" onclick="document.getElementById('resendForm').submit()" class="btn btn-link p-0 m-0 align-baseline">
+          Resend OTP
+        </button>
+        <button type="submit" class="btn btn-success">Verify & Log In</button>
+      </div>
+    </form>
+
+    <!-- Hidden Form for Resend OTP -->
+    <form id="resendForm" method="POST" action="{{ url_for('resend_otp') }}" style="display:none;"></form>
+  </div>
+</div>
+{% endblock %}

@@ -4,8 +4,7 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-md-10">
-    <h1 class="mb-4">Welcome, {{ current_user.username }}!</h1>
-    <p class="lead">You're logged in as <strong>{{ current_user.role }}</strong>.</p>
+    <h1 class="mb-4">Welcome to your Dashboard!</h1>
 
     {% if current_user.role == 'Admin' and admin_data %}
       <div class="row g-4 mb-5">

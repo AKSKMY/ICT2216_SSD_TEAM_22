@@ -7,9 +7,12 @@
 
   <!-- Bootstrap 5 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
-  <!-- Optional: Custom Branding Styles -->
+  <!-- Custom Branding Styles -->
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/index.css') }}">
+
+  <!-- Nav underline animation style -->
 </head>
 <body class="d-flex flex-column min-vh-100">
 
@@ -19,28 +22,40 @@
       <a href="{% if current_user.is_authenticated %}{{ url_for('dashboard') }}{% else %}{{ url_for('serve_index') }}{% endif %}" class="text-white text-decoration-none">
         <h1 class="h4 mb-0">MediVault</h1>
       </a>
-        <nav>
+      <nav>
         {% if current_user.is_authenticated %}
+          <div class="d-flex align-items-center">
             {% if current_user.role == 'Admin' %}
-            <a href="/admin/viewLogs" class="text-white text-decoration-none me-3">View Audit Logs</a>
-            <a href="/admin/createAccount" class="text-white text-decoration-none me-3">Create Staff Account</a>
-            <a href="/admin/viewUsers" class="text-white text-decoration-none me-3">Manage Users</a>
+              <a href="/admin/viewLogs" class="nav-underline me-3">View Audit Logs</a>
+              <a href="/admin/createAccount" class="nav-underline me-3">Create Staff Account</a>
+              <a href="/admin/viewUsers" class="nav-underline me-3">Manage Users</a>
 
             {% elif current_user.role == 'Doctor' %}
-            <a href="/doctor/viewPatients" class="text-white text-decoration-none me-3">View My Patients</a>
+              <a href="/doctor/viewPatients" class="nav-underline me-3">View My Patients</a>
 
             {% elif current_user.role == 'Patient' %}
-            <a href="/user/profile" class="text-white text-decoration-none me-3">Profile</a>
-            <a href="/user/patientRecords" class="text-white text-decoration-none me-3">Records</a>
+              <a href="/user/profile" class="nav-underline me-3">Profile</a>
+              <a href="/user/patientRecords" class="nav-underline me-3">Records</a>
             {% endif %}
 
-            <a href="{{ url_for('logout') }}" class="text-white text-decoration-none">Logout</a>
-
+            <!-- Profile Dropdown (no underline, with arrow icon that rotates) -->
+            <div class="dropdown">
+              <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-person-circle fs-4 me-2"></i>
+                <span>{{ current_user.username }}</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                <li><a class="dropdown-item" href="">Profile</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
+              </ul>
+            </div>
+          </div>
         {% else %}
-            <a href="{{ url_for('register') }}" class="text-white text-decoration-none me-3">Register</a>
-            <a href="{{ url_for('login') }}" class="text-white text-decoration-none">Login</a>
+          <a href="{{ url_for('register') }}" class="nav-underline me-3">Register</a>
+          <a href="{{ url_for('login') }}" class="nav-underline">Login</a>
         {% endif %}
-        </nav>
+      </nav>
     </div>
   </header>
 
