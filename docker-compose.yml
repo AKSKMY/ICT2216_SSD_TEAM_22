@@ -1,41 +1,47 @@
+
 services:
   # ───────────────────────────────────────────────────────────────────────
   # MySQL 8.0 service (named "db")
   # ───────────────────────────────────────────────────────────────────────
   db:
     image: mysql:8.0
-    container_name: rbac_db
-    command: --default-authentication-plugin=mysql_native_password
-    restart: always
 
     ports:
       - "3306:3306"
 
+    networks:
+      - app_net
+
     environment:
       #! TO CHANGE ROOT PASSWORD UPON FINALISING
-      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
       MYSQL_DATABASE: rbac
       #! NORMAL USER CREDENTIALS
       MYSQL_USER: appuser
-      MYSQL_PASSWORD: appuser_password_here
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_app_password
 
     # Only one "volumes:" block—do not repeat this key twice
     volumes:
       - db_data:/var/lib/mysql
       - ./Database/schema_script.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - ./Database/data_population.sql:/docker-entrypoint-initdb.d/02_data.sql
+    secrets:
+      - mysql_root_password
+      - mysql_app_password
+    deploy:
+      restart_policy:
+        condition: on-failure
 
   # ───────────────────────────────────────────────────────────────────────
   # Flask + Gunicorn service
   # ───────────────────────────────────────────────────────────────────────
   flask_app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: rbac_flask_app
-    restart: unless-stopped
+    image: akskmy/ssd_flask_app:v3
     depends_on:
       - db
+
+    networks:
+      - app_net
 
     ports:
       - "5000:5000"
@@ -45,16 +51,25 @@ services:
       - FLASK_SECRET_KEY=Your_Very_Strong_Secret_Key_MEDIVAULT!
       - DB_HOST=db
       - DB_USER=root
-      - DB_PASSWORD=admin
+      - DB_PASSWORD_FILE=/run/secrets/mysql_root_password
       - DB_NAME=rbac
+
+    secrets:
+      - mysql_app_password
+
+    deploy:
+      restart_policy:
+        condition: on-failure
 
   nginx:
     image: nginx:latest
-    container_name: nginx_proxy
-    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
+
+    networks:
+      - app_net
+
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt  # Mount Let's Encrypt certificates directory
@@ -63,3 +78,15 @@ services:
 
 volumes:
   db_data:
+
+networks:
+  app_net:
+    driver: overlay
+
+secrets:
+  # secret created externally in the swarm:
+  mysql_root_password:
+    external: true
+
+  mysql_app_password:
+    external: true
