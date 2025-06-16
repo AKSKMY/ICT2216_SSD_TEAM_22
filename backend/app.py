@@ -287,7 +287,23 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
 
+    site_key = os.getenv("RECAPTCHA_SITE_KEY")
+    secret_key = os.getenv("RECAPTCHA_SECRET_KEY")
+
     if request.method == "POST":
+        # reCAPTCHA verification
+        recaptcha_response = request.form.get("g-recaptcha-response")
+        verify_url = "https://www.google.com/recaptcha/api/siteverify"
+        payload = {
+            'secret': secret_key,
+            'response': recaptcha_response,
+            'remoteip': request.remote_addr
+        }
+        recaptcha_result = requests.post(verify_url, data=payload).json()
+        if not recaptcha_result.get("success"):
+            flash("reCAPTCHA failed. Please try again.", "error")
+            return render_template("login.html", site_key=site_key)
+
         ip = request.remote_addr
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
@@ -342,7 +358,7 @@ def login():
             log_action(None, f"Login attempt from IP {ip} for username '{username}'")
             flash("Invalid username or password.", "error")
 
-    return render_template("login.html")
+    return render_template("login.html", site_key=site_key)
 
 
 @app.route("/verify-otp", methods=["GET", "POST"])

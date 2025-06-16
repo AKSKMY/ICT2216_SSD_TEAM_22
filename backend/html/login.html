@@ -16,6 +16,9 @@
         <input type="password" class="form-control" id="password" name="password" required>
       </div>
 
+      <!-- Google reCAPTCHA -->
+      <div class="g-recaptcha mb-3" data-sitekey="{{ site_key }}"></div>
+
       <button type="submit" class="btn btn-primary w-100">Login</button>
     </form>
 
@@ -24,4 +27,5 @@
     </p>
   </div>
 </div>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 {% endblock %}
