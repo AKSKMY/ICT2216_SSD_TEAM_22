@@ -15,6 +15,7 @@ from flask import (
     Flask, send_from_directory, render_template,
     request, redirect, url_for, flash, session
 )
+
 #from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import (
     LoginManager, UserMixin, login_user,
@@ -678,10 +679,22 @@ def create_account():
                     return render_template("admin_createAccount.html")
                 role_id = role_row["role_Id"]
 
+                def bcrypt_hash(password: str, rounds: int = 12) -> tuple[bytes, bytes]:
+
+                    salt = bcrypt.gensalt(rounds=rounds)
+                    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+                    return hashed, salt
+
+
+
+
+
+
                 # Insert into user table
-                hashed_pw = generate_password_hash(password)
-                cur.execute("INSERT INTO user (username, email, password) VALUES (%s, %s, %s)",
-                            (username, email, hashed_pw))
+                #hashed_pw = generate_password_hash(password) (old method using werkzeug)
+                hashed_pw, salt = bcrypt_hash(password)
+                cur.execute("INSERT INTO user (username, email, password,salt) VALUES (%s, %s, %s,%s)",
+                            (username, email, hashed_pw,salt))
                 user_id = cur.lastrowid
 
                 # Insert into userrole table
