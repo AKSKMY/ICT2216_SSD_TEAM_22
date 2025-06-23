@@ -14,7 +14,7 @@ TRUNCATE TABLE `rbac`.`medical_record`;
 
 
 -- Users (IDs start from 1) (Password is all 'admin')
-INSERT INTO `rbac`.`user` (`username`, `email`, `password`, `hash`)
+INSERT INTO `rbac`.`user` (`username`, `email`, `password`, `salt`)
 VALUES 
     ('alice', 'alice@example.com', '$2b$12$N5Kdp9OPLeDn1qPpf6gJzeUy.EudyvTSitjwrtDuWCzKWFCTwbfXG', '$2b$12$N5Kdp9OPLeDn1qPpf6gJze'), -- ID = 1 (patient)
     ('bob', 'bob@example.com', '$2b$12$0WxzutQqA.kDgEC/YGodkuzNi0MDJ4QEffJKbA9gQ1m97b2KNfrri', '$2b$12$0WxzutQqA.kDgEC/YGodku'),     -- ID = 2 (doctor)
