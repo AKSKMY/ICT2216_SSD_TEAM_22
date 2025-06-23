@@ -191,6 +191,11 @@ def register():
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
+        # Input Validation
+        if len(password) < 8:                                   
+            flash("Password must be at least 8 characters.",    
+              "error")                                       
+        return render_template("register.html") 
 
         # Patient Table
         first_name = request.form.get("first_name", "")
