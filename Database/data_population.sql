@@ -12,13 +12,15 @@ TRUNCATE TABLE `rbac`.`doctor`;
 TRUNCATE TABLE `rbac`.`nurse`;
 TRUNCATE TABLE `rbac`.`medical_record`;
 
+
 -- Users (IDs start from 1) (Password is all 'admin')
-INSERT INTO `rbac`.`user` (`username`, `email`, `password`)
+INSERT INTO `rbac`.`user` (`username`, `email`, `password`, `hash`)
 VALUES 
-    ('alice', 'alice@example.com', 'scrypt:32768:8:1$3v6Hg0W8aXSeMfNt$59018d7c2e74c5803e0e3227386785d29b6d9b5bdedd4a8064c2c8a4fc59f1f66e7201ffdd5c1d3fd21d0c2706024e4416887c08245873c550d1b5709eb3c799'),  -- ID = 1
-    ('bob', 'bob@example.com', 'scrypt:32768:8:1$3v6Hg0W8aXSeMfNt$59018d7c2e74c5803e0e3227386785d29b6d9b5bdedd4a8064c2c8a4fc59f1f66e7201ffdd5c1d3fd21d0c2706024e4416887c08245873c550d1b5709eb3c799'),      -- ID = 2
-    ('carol', 'carol@example.com', 'scrypt:32768:8:1$3v6Hg0W8aXSeMfNt$59018d7c2e74c5803e0e3227386785d29b6d9b5bdedd4a8064c2c8a4fc59f1f66e7201ffdd5c1d3fd21d0c2706024e4416887c08245873c550d1b5709eb3c799'),  -- ID = 3
-    ('david', 'david@example.com', 'scrypt:32768:8:1$3v6Hg0W8aXSeMfNt$59018d7c2e74c5803e0e3227386785d29b6d9b5bdedd4a8064c2c8a4fc59f1f66e7201ffdd5c1d3fd21d0c2706024e4416887c08245873c550d1b5709eb3c799');  -- ID = 4
+    ('alice', 'alice@example.com', '$2b$12$N5Kdp9OPLeDn1qPpf6gJzeUy.EudyvTSitjwrtDuWCzKWFCTwbfXG', '$2b$12$N5Kdp9OPLeDn1qPpf6gJze'), -- ID = 1 (patient)
+    ('bob', 'bob@example.com', '$2b$12$0WxzutQqA.kDgEC/YGodkuzNi0MDJ4QEffJKbA9gQ1m97b2KNfrri', '$2b$12$0WxzutQqA.kDgEC/YGodku'),     -- ID = 2 (doctor)
+    ('carol', 'carol@example.com', '$2b$12$gFb0jF/j1yTz07wX5xO6COiQvGGJk5HL7ALlxvjk/iWzFQbSU5PDi', '$2b$12$gFb0jF/j1yTz07wX5xO6CO'), -- ID = 3 (nurse)
+    ('david', 'david@example.com', '$2b$12$.WWWVSzseRtqNbLuuuyRpeu1uP6QRDqjZcwPJLnnM.8EngHPMEX6C', '$2b$12$.WWWVSzseRtqNbLuuuyRpe'); -- ID = 4 (admin)
+
 
 -- Patients (tie patient_id = user_id = 1)
 INSERT INTO `rbac`.`patient` (`user_Id`, `first_name`, `last_name`, `age`, `gender`, `data_of_birth`)

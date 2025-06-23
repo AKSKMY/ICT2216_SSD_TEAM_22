@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS `rbac`.`user` (
   `username` VARCHAR(255) NOT NULL,
   `email` VARCHAR(45) NOT NULL,
   `password` VARCHAR(255) NOT NULL,
+  `salt` VARCHAR(255) NOT NULL,
   PRIMARY KEY (`user_Id`))
 ENGINE = InnoDB
 AUTO_INCREMENT = 9
@@ -110,6 +111,7 @@ CREATE TABLE IF NOT EXISTS `rbac`.`medical_record` (
   `diagnosis` VARCHAR(255) NULL DEFAULT NULL,
   `doctor_id` INT NULL DEFAULT NULL,
   `date` DATE NULL DEFAULT NULL,
+  `digital_signature` VARCHAR(255) NULL DEFAULT NULL,
   PRIMARY KEY (`record_id`),
   CONSTRAINT `fk_doctor_Id`
     FOREIGN KEY (`doctor_id`)
