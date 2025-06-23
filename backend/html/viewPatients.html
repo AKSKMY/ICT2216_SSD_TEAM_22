@@ -6,10 +6,14 @@
   <h1 class="mb-4">Patient List</h1>
 
   <div class="mb-3">
-    <a href="{{ url_for('add_patient') }}" class="btn btn-primary">+ Add Patient</a>
+    {% if current_user.role == 'Doctor' %}
+      <a href="{{ url_for('add_patient') }}" class="btn btn-primary">+ Add Patient</a>
+    {% endif %}
   </div>
 
-  <form method="get" action="{{ url_for('view_patients') }}" class="mb-4">
+  {% set search_action = url_for('doctor_view_patients') if current_user.role == 'Doctor'
+                     else url_for('nurse_view_patients') %}
+  <form method="get" action="{{ search_action }}" class="mb-4">
     <div class="input-group">
       <input type="text" name="search" class="form-control" placeholder="Search patients by name..." value="{{ search_query or '' }}">
       <button type="submit" class="btn btn-outline-secondary">Search</button>
@@ -39,9 +43,15 @@
         <td>{{ patient.gender }}</td>
         <td>{{ patient.data_of_birth }}</td>
         <td>
-          <a href="{{ url_for('view_patient_records', patient_id=patient.user_Id) }}" class="btn btn-primary btn-sm">
-            View Records
-          </a>
+          {% if current_user.role == 'Doctor' %}
+            <a href="{{ url_for('doctor_view_patient_records', patient_id=patient.user_Id) }}" class="btn btn-primary btn-sm">
+              View Records
+            </a>
+          {% elif current_user.role == 'Nurse' %}
+            <a href="{{ url_for('nurse_view_patient_records', patient_id=patient.user_Id) }}" class="btn btn-primary btn-sm">
+              View Records
+            </a>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}

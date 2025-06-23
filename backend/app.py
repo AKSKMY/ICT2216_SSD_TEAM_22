@@ -439,10 +439,11 @@ def resend_otp():
 def dashboard():
     admin_data = None
     doctor_data = None
+    nurse_data = None
 
-    if current_user.role == "Admin":
-        conn = get_db()
-        with conn.cursor() as cur:
+    conn = get_db()
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+        if current_user.role == "Admin":
             cur.execute("SELECT COUNT(*) AS total FROM user")
             total_users = cur.fetchone()['total']
 
@@ -454,30 +455,27 @@ def dashboard():
                 GROUP BY r.role_name
             """)
             role_counts = {row['role_name']: row['count'] for row in cur.fetchall()}
-        conn.close()
 
-        admin_data = {
-            "total_users": total_users,
-            "total_doctors": role_counts.get("Doctor", 0),
-            "total_nurses": role_counts.get("Nurse", 0),
-            "total_patients": role_counts.get("Patient", 0),
-        }
-    elif current_user.role == "Doctor":
-        conn = get_db()
-        with conn.cursor(pymysql.cursors.DictCursor) as cur:
-            # Count assigned patients
+            admin_data = {
+                "total_users": total_users,
+                "total_doctors": role_counts.get("Doctor", 0),
+                "total_nurses": role_counts.get("Nurse", 0),
+                "total_patients": role_counts.get("Patient", 0),
+            }
+
+        elif current_user.role == "Doctor":
+            # Count patients seen by this doctor
             cur.execute("""
-                SELECT COUNT(*) AS total_patients
+                SELECT COUNT(DISTINCT p.user_Id) AS total_patients
                 FROM rbac.patient p
                 JOIN rbac.medical_record mr ON p.user_Id = mr.patient_id
                 WHERE mr.doctor_id = %s
             """, (current_user.id,))
             total_patients = cur.fetchone()['total_patients']
 
-            # Recent records added by this doctor
             cur.execute("""
                 SELECT mr.record_id, mr.diagnosis, mr.date,
-                    p.first_name AS patient_first_name, p.last_name AS patient_last_name
+                       p.first_name AS patient_first_name, p.last_name AS patient_last_name
                 FROM rbac.medical_record mr
                 JOIN rbac.patient p ON mr.patient_id = p.user_Id
                 WHERE mr.doctor_id = %s
@@ -485,14 +483,35 @@ def dashboard():
                 LIMIT 3
             """, (current_user.id,))
             recent_records = cur.fetchall()
-        conn.close()
 
-        doctor_data = {
-            "total_patients": total_patients,
-            "recent_records": recent_records
-        }
+            doctor_data = {
+                "total_patients": total_patients,
+                "recent_records": recent_records
+            }
 
-    return render_template("dashboard.html", admin_data=admin_data, doctor_data=doctor_data)
+        elif current_user.role == "Nurse":
+            # Count all unique patients in the system (nurses see all)
+            cur.execute("SELECT COUNT(DISTINCT user_Id) AS total_patients FROM rbac.patient")
+            total_patients = cur.fetchone()['total_patients']
+
+            cur.execute("""
+                SELECT mr.record_id, mr.diagnosis, mr.date,
+                       p.first_name AS patient_first_name, p.last_name AS patient_last_name
+                FROM rbac.medical_record mr
+                JOIN rbac.patient p ON mr.patient_id = p.user_Id
+                ORDER BY mr.date DESC
+                LIMIT 3
+            """)
+            recent_records = cur.fetchall()
+
+            nurse_data = {
+                "total_patients": total_patients,
+                "recent_records": recent_records
+            }
+
+    conn.close()
+
+    return render_template("dashboard.html",admin_data=admin_data, doctor_data=doctor_data, nurse_data=nurse_data)
 
 
 @app.route("/admin/viewUsers")
@@ -705,21 +724,18 @@ def view_logs():
 
     return render_template("admin_viewLogs.html", logs=logs)
 
-
-# Doctor - View patients
-@app.route("/doctor/viewPatients", methods=["GET", "POST"])
+# Nurse - View patients
+@app.route("/nurse/viewPatients", methods=["GET", "POST"])
 @login_required
-def view_patients():
-    if current_user.role != 'Doctor' or not has_permission(current_user.id, "View Medical Records"):
+def nurse_view_patients():
+    if current_user.role != 'Nurse' or not has_permission(current_user.id, "View Medical Records"):
         flash("Access denied.", "error")
         return redirect(url_for("dashboard"))
 
     search_query = request.args.get("search", "").strip()
-    
-    # Input validation: only allow letters, spaces, hyphens, apostrophes
     if search_query and not re.match(r"^[a-zA-Z\s\-']{1,50}$", search_query):
         flash("Invalid characters in search. Only letters and basic punctuation are allowed.", "error")
-        return redirect(url_for("view_patients"))
+        return redirect(url_for("nurse_view_patients"))
 
     conn = get_db()
     with conn.cursor() as cur:
@@ -737,18 +753,75 @@ def view_patients():
             """)
         users = cur.fetchall()
 
-    return render_template("doctor_viewPatients.html", users=users, search_query=search_query)
+    return render_template("viewPatients.html", users=users, search_query=search_query)
+
+# Nurse - View patients
+@app.route('/nurse/patientRecords/<int:patient_id>')
+@login_required
+def nurse_view_patient_records(patient_id):
+    if current_user.role != 'Nurse' or not has_permission(current_user.id, "View Medical Records"):
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
+        cur.execute("""
+            SELECT mr.record_id, mr.diagnosis, mr.date,
+                   mr.patient_id,
+                   p.first_name AS patient_first_name, p.last_name AS patient_last_name,
+                   d.first_name AS doctor_first_name, d.last_name AS doctor_last_name
+            FROM rbac.medical_record mr
+            JOIN rbac.patient p ON mr.patient_id = p.user_Id
+            JOIN rbac.doctor d ON mr.doctor_id = d.user_Id
+            WHERE mr.patient_id = %s
+            ORDER BY mr.date DESC
+        """, (patient_id,))
+        records = cur.fetchall()
+
+    return render_template("medicalRecord.html", records=records, patient_id=patient_id)
+
+
+# Doctor - View patients
+@app.route("/doctor/viewPatients", methods=["GET", "POST"])
+@login_required
+def doctor_view_patients():
+    if current_user.role != 'Doctor' or not has_permission(current_user.id, "View Medical Records"):
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    search_query = request.args.get("search", "").strip()
+    if search_query and not re.match(r"^[a-zA-Z\s\-']{1,50}$", search_query):
+        flash("Invalid characters in search. Only letters and basic punctuation are allowed.", "error")
+        return redirect(url_for("doctor_view_patients"))
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        if search_query:
+            like_pattern = f"%{search_query}%"
+            cur.execute("""
+                SELECT DISTINCT p.user_Id, p.first_name, p.last_name, p.age, p.gender, p.data_of_birth
+                FROM rbac.patient p
+                WHERE p.first_name LIKE %s OR p.last_name LIKE %s
+            """, (like_pattern, like_pattern))
+        else:
+            cur.execute("""
+                SELECT DISTINCT p.user_Id, p.first_name, p.last_name, p.age, p.gender, p.data_of_birth
+                FROM rbac.patient p
+            """)
+        users = cur.fetchall()
+
+    return render_template("viewPatients.html", users=users, search_query=search_query)
 
 # Doctor - View Medical records
 @app.route('/doctor/patientRecords/<int:patient_id>')
 @login_required
-def view_patient_records(patient_id):
+def doctor_view_patient_records(patient_id):
     if current_user.role != 'Doctor' or not has_permission(current_user.id, "View Medical Records"):
         flash("Access denied.", "error")
         return redirect(url_for("dashboard"))
 
     conn = get_db()
-    with conn.cursor(pymysql.cursors.DictCursor) as cur:  # Use DictCursor
+    with conn.cursor(pymysql.cursors.DictCursor) as cur:
         cur.execute("""
             SELECT mr.record_id, mr.diagnosis, mr.date,
                    mr.patient_id,

@@ -31,7 +31,10 @@
               <a href="/admin/viewUsers" class="nav-underline me-3">Manage Users</a>
 
             {% elif current_user.role == 'Doctor' %}
-              <a href="/doctor/viewPatients" class="nav-underline me-3">View My Patients</a>
+              <a href="/doctor/viewPatients" class="nav-underline me-3">View All Patients</a>
+
+            {% elif current_user.role == 'Nurse' %}
+              <a href="/nurse/viewPatients" class="nav-underline me-3">View All Patients</a>
 
             {% elif current_user.role == 'Patient' %}
               <a href="/user/profile" class="nav-underline me-3">Profile</a>

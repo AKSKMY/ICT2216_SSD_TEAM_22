@@ -6,6 +6,7 @@
   <div class="col-md-10">
     <h1 class="mb-4">Welcome to your Dashboard!</h1>
 
+    {# Admin Section #}
     {% if current_user.role == 'Admin' and admin_data %}
       <div class="row g-4 mb-5">
         <div class="col-md-3">
@@ -43,6 +44,7 @@
       </div>
     {% endif %}
 
+    {# Doctor Section #}
     {% if current_user.role == 'Doctor' and doctor_data %}
       <div class="row g-4 mb-5">
         <div class="col-md-4">
@@ -50,11 +52,10 @@
             <div class="card-body">
               <h5 class="card-title">Your Patients</h5>
               <p class="card-text fs-3">{{ doctor_data.total_patients }}</p>
-              <a href="{{ url_for('view_patients') }}" class="btn btn-outline-primary btn-sm mt-2">View Patients</a>
+              <a href="{{ url_for('doctor_view_patients') }}" class="btn btn-outline-primary btn-sm mt-2">View Patients</a>
             </div>
           </div>
         </div>
-
         <div class="col-md-8">
           <div class="card shadow-sm h-100">
             <div class="card-body">
@@ -70,6 +71,40 @@
                 </ul>
               {% else %}
                 <p class="text-muted">No recent records found.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {# Nurse Section #}
+    {% if current_user.role == 'Nurse' and nurse_data %}
+      <div class="row g-4 mb-5">
+        <div class="col-md-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title">Accessible Patients</h5>
+              <p class="card-text fs-3">{{ nurse_data.total_patients }}</p>
+              <a href="{{ url_for('nurse_view_patients') }}" class="btn btn-outline-primary btn-sm mt-2">View Patients</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-8">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h5 class="card-title">Recently Viewed Records</h5>
+              {% if nurse_data.recent_records %}
+                <ul class="list-group list-group-flush">
+                  {% for record in nurse_data.recent_records %}
+                    <li class="list-group-item">
+                      {{ record.date }} – {{ record.patient_first_name }} {{ record.patient_last_name }}:
+                      <em>{{ record.diagnosis }}</em>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p class="text-muted">No records available.</p>
               {% endif %}
             </div>
           </div>

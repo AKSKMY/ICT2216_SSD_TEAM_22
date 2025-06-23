@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}Medical Records - MediVault{% endblock %}
+
 {% block content %}
 <div class="container">
   <h1 class="mb-4">Medical Records</h1>
@@ -36,7 +38,9 @@
         <td>{{ record.patient_first_name }} {{ record.patient_last_name }}</td>
         {% if current_user.role == 'Doctor' %}
         <td>
-          <a href="{{ url_for('edit_medical_record', record_id=record.record_id) }}" class="btn btn-sm btn-primary">Edit</a>
+          <a href="{{ url_for('edit_medical_record', record_id=record.record_id) }}" class="btn btn-sm btn-primary">
+            Edit
+          </a>
         </td>
         {% endif %}
       </tr>
