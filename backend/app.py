@@ -3,13 +3,14 @@ import re
 from dotenv import load_dotenv
 load_dotenv()  # loads .env file automatically
 import pymysql
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import hashlib
 import random
 import requests
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_mail import Mail, Message
+from flask_wtf import CSRFProtect
 import bcrypt
 from flask import (
     Flask, send_from_directory, render_template,
@@ -37,6 +38,15 @@ app = Flask(
     static_folder=static_folder,
     static_url_path="/static"
 )
+
+app.config.update(
+    SESSION_COOKIE_SECURE   = True,
+    SESSION_COOKIE_HTTPONLY = True,
+    SESSION_COOKIE_SAMESITE = "Strict",
+    PERMANENT_SESSION_LIFETIME   = timedelta(minutes=30),
+    SESSION_REFRESH_EACH_REQUEST = True,
+)
+
 
 # Flask-Mail config (using environment variables)
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
@@ -390,7 +400,10 @@ def verify_otp():
                 username=user_data["username"],
                 role=user_data["role"]
             )
-            login_user(user)
+            #login_user(user)
+            login_user(user, fresh=True)        
+            session.permanent = True            
+            session.modified  = True            
 
             session.pop("pending_user", None)
             session.pop("email_otp", None)
