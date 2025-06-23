@@ -10,12 +10,12 @@ import requests
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_mail import Mail, Message
-
+import bcrypt
 from flask import (
     Flask, send_from_directory, render_template,
     request, redirect, url_for, flash, session
 )
-from werkzeug.security import generate_password_hash, check_password_hash
+#from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import (
     LoginManager, UserMixin, login_user,
     logout_user, login_required, current_user
@@ -215,7 +215,7 @@ def register():
         # To check if password is breached
         if is_password_pwned(password):
             flash("This password has appeared in a data breach. Please choose another.", "error")
-            return render_template("admin_createAccount.html")
+            return render_template("register.html")
 
         if not first_name or not last_name:
             flash("First name and last name are required.", "error")
@@ -250,12 +250,12 @@ def register():
                 cur.execute("SELECT role_Id FROM role WHERE role_name = %s", ("Patient",))
                 roleresult = cur.fetchone()
                 role_id = roleresult['role_Id']
-
-                hashed_pw = generate_password_hash(password)
+                salt = bcrypt.gensalt()
+                hashed_pw = bcrypt.hashpw(password.encode('utf-8'), salt)
 
                 cur.execute(
-                    "INSERT INTO user (username, email, password) VALUES (%s, %s, %s)",
-                    (username, email, hashed_pw)
+                    "INSERT INTO user (username, email, password, salt) VALUES (%s, %s, %s, %s)",
+                    (username, email, hashed_pw, salt)
                 )
 
                 user_id = cur.lastrowid
@@ -322,7 +322,7 @@ def login():
         conn = get_db()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT u.user_Id, u.username, u.email, u.password, r.role_name AS role
+                SELECT u.user_Id, u.username, u.email, u.password, u.salt, r.role_name AS role
                 FROM user u
                 JOIN userrole ur ON u.user_Id = ur.user_Id
                 JOIN role r ON ur.role_Id = r.role_Id
@@ -330,8 +330,8 @@ def login():
             """, (username,))
             row = cur.fetchone()
         conn.close()
-
-        if row and check_password_hash(row["password"], password):
+        
+        if row and bcrypt.checkpw(password.encode('utf-8'), row["password"].encode('utf-8')):
             # Generate OTP
             otp = str(random.randint(100000, 999999))
             session["pending_user"] = {
