@@ -11,6 +11,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_mail import Mail, Message
 import bcrypt
+from datetime import timedelta
+import secrets
 from flask import (
     Flask, send_from_directory, render_template,
     request, redirect, url_for, flash, session
@@ -47,6 +49,15 @@ app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 
 mail = Mail(app)
+
+app.config.update(
+    SESSION_COOKIE_SECURE=True,     # Only over HTTPS (for production)
+    SESSION_COOKIE_HTTPONLY=True,   # JS can't access the cookie
+    SESSION_COOKIE_SAMESITE='Lax'   # CSRF protection
+)
+
+# Session config
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=15)
 
 # Default Limiter
 limiter = Limiter(
@@ -111,6 +122,82 @@ def load_user(user_id):
     if row:
         return User(row["user_Id"], row["username"], row["role"])
     return None
+
+# Timeout checks
+@app.before_request
+def session_timeout_check():
+    if current_user.is_authenticated:
+        now = datetime.utcnow().timestamp()
+        last_active = session.get("last_active", now)
+        timeout_seconds = app.permanent_session_lifetime.total_seconds()
+
+        # Check if session has expired due to inactivity
+        if now - last_active > timeout_seconds:
+            # Remove session token from DB
+            token = session.get("session_token")
+            if token:
+                conn = get_db()
+                try:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            DELETE FROM critical.user_sessions
+                            WHERE session_token = %s AND user_id = %s
+                        """, (token, current_user.id))
+                    conn.commit()
+                finally:
+                    conn.close()
+
+            logout_user()
+            session.clear()
+            flash("Session expired due to inactivity. Please log in again.", "warning")
+            return redirect(url_for("login"))
+
+        # Session is still valid, update last_active in session
+        session["last_active"] = now
+
+        # Update the database's last_active field
+        token = session.get("session_token")
+        if token:
+            conn = get_db()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE critical.user_sessions
+                        SET last_active = NOW()
+                        WHERE session_token = %s AND user_id = %s
+                    """, (token, current_user.id))
+                conn.commit()
+            finally:
+                conn.close()
+
+# Session Token validation
+@app.before_request
+def check_valid_session_token():
+    if request.endpoint in {"verify_otp", "login", "static"}:
+        return
+    
+    if current_user.is_authenticated:
+        token = session.get("session_token")
+        if not token:
+            logout_user()
+            session.clear()
+            flash("Session expired. Please log in again.", "warning")
+            return redirect(url_for("login"))
+
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 1 FROM critical.user_sessions
+                WHERE session_token = %s AND user_id = %s
+            """, (token, current_user.id))
+            result = cur.fetchone()
+
+        conn.close()
+        if not result:
+            logout_user()
+            session.clear()
+            flash("Session revoked or expired. Please log in again.", "warning")
+            return redirect(url_for("login"))
 
 # ───────────────────────────────────────────────────────
 # GLOBAL TEMPLATE CONTEXT
@@ -196,7 +283,7 @@ def register():
         if len(password) < 8:                                   
             flash("Password must be at least 8 characters.",    
               "error")                                       
-        return render_template("register.html") 
+            return render_template("register.html") 
 
         # Patient Table
         first_name = request.form.get("first_name", "")
@@ -366,7 +453,6 @@ def login():
 
     return render_template("login.html", site_key=site_key)
 
-
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
     if "pending_user" not in session:
@@ -384,12 +470,36 @@ def verify_otp():
             return redirect(url_for("login"))
 
         if user_otp == actual_otp:
+            token = secrets.token_urlsafe(64)
+            session["session_token"] = token
+            
             user_data = session["pending_user"]
             user = User(
                 user_Id=user_data["user_Id"],
                 username=user_data["username"],
                 role=user_data["role"]
             )
+            
+            session.permanent = True
+            session["last_active"] = datetime.utcnow().timestamp()
+            conn = get_db()
+            
+            with conn.cursor() as cur:
+                session_lifetime_seconds = app.permanent_session_lifetime.total_seconds()
+                expiry_timestamp = datetime.utcnow().timestamp() + session_lifetime_seconds
+
+                cur.execute("""
+                    INSERT INTO critical.user_sessions (session_token, user_id, ip_address, created_at, last_active, expires_at)
+                    VALUES (%s, %s, %s, NOW(), NOW(), FROM_UNIXTIME(%s))
+                """, (
+                    token,
+                    user_data["user_Id"],
+                    request.remote_addr,
+                    expiry_timestamp
+                ))
+                conn.commit()
+            conn.close()
+            
             login_user(user)
 
             session.pop("pending_user", None)
