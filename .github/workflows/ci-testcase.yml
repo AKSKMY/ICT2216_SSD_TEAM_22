@@ -45,6 +45,9 @@ jobs:
           -e DB_NAME=rbac \
           medivault-app \
           python app.py
+    
+    - name: Wait for Flask app to boot
+      run: sleep 20
 
     - name: Test Website Connection
       run: curl --fail http://localhost:5000/
