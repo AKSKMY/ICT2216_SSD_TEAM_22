@@ -19,6 +19,7 @@ from flask import (
     request, redirect, url_for, flash, session
 )
 from pathlib import Path
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 #from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import (
@@ -41,6 +42,8 @@ app = Flask(
     static_folder=static_folder,
     static_url_path="/static"
 )
+
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 app.config.update(
     SESSION_COOKIE_SECURE   = True,
