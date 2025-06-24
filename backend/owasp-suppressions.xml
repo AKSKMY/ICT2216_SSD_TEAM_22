@@ -3,7 +3,7 @@
               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
               xsi:schemaLocation="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.2.xsd https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.2.xsd">
   <suppress>
-    <packageUrl>pkg:pypi/pymysql@1.1.1</packageUrl>
     <cve>CVE-2017-15945</cve>
+    <cpe>cpe:2.3:a:mysql:mysql:1.1.1:*:*:*:*:*:*:*</cpe>
   </suppress>
 </suppressions>
