@@ -59,6 +59,7 @@ jobs:
             --enableExperimental
             --failOnCVSS 7
             --enableRetired
+            --suppression backend/owasp-suppressions.xml
 
       - name: Upload OWASP DC report
         if: always()

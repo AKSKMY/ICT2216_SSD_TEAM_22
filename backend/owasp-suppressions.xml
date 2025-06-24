@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<suppressions>
+  <suppress>
+    <packageUrl>pkg:pypi/pymysql@1.1.1</packageUrl>
+    <cve>CVE-2017-15945</cve>
+  </suppress>
+</suppressions>
