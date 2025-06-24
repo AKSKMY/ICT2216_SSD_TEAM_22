@@ -56,13 +56,13 @@ services:
       - DB_NAME=rbac
       - RECAPTCHA_SITE_KEY_FILE=/run/secrets/RECAPTCHA_SITE_KEY
       - RECAPTCHA_SECRET_KEY_FILE=/run/secrets/RECAPTCHA_SECRET_KEY
-      - KEK_MASTER_KEY=/run/secrets/kek_master_key
+      - KEK_MASTER_KEY=/run/secrets/KEK_MASTER_KEY
 
     secrets:
       - mysql_app_password
       - RECAPTCHA_SITE_KEY
       - RECAPTCHA_SECRET_KEY
-      - kek_master_key
+      - KEK_MASTER_KEY
 
     deploy:
       restart_policy:
@@ -102,4 +102,7 @@ secrets:
     external: true
 
   RECAPTCHA_SECRET_KEY:
+    external: true
+
+  KEK_MASTER_KEY:
     external: true
