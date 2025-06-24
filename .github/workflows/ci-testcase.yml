@@ -1,4 +1,4 @@
-name: MediVault Main CI
+name: MediVault TestCases
 
 on:
   push:
@@ -46,13 +46,10 @@ jobs:
           medivault-app \
           python app.py
 
-    - name: Wait for Flask app to boot
-      run: sleep 20
-
-    - name: Test `/` endpoint
+    - name: Test Website Connection
       run: curl --fail http://localhost:5000/
 
-    - name: Test `/test-db` endpoint
+    - name: Test DB Connection
       run: curl --fail http://localhost:5000/test-db
 
     - name: Install Chromium and test dependencies
