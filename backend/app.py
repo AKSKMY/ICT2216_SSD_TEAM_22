@@ -26,7 +26,8 @@ from flask_login import (
     logout_user, login_required, current_user
 )
 from config import DevelopmentConfig, ProductionConfig
-
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import base64
 
 # ───────────────────────────────────────────────────────
 # FLASK APP CONFIGURATION
@@ -250,6 +251,37 @@ def is_password_pwned(password):
     hashes = (line.split(":") for line in response.text.splitlines())
     return any(s == suffix for s, _ in hashes)
 
+def decrypt_with_master_key(encoded_encrypted: str, master_key: bytes) -> bytes:
+    aesgcm = AESGCM(master_key)
+    encrypted = base64.b64decode(encoded_encrypted)
+
+    nonce = encrypted[:12]
+    ciphertext = encrypted[12:]
+
+    return aesgcm.decrypt(nonce, ciphertext, None)
+
+def get_encrypted_kek_from_db(kek_id):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT kek_value FROM critical.kek WHERE kek_id = %s", (kek_id,))
+        result = cursor.fetchone()
+        if result is None:
+            raise ValueError(f"KEK with id {kek_id} not found in the database.")
+        return result['kek_value']  # the base64 string
+    finally:
+        cursor.close()
+
+def create_encrypted_AES_key(kek_id):
+    master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
+    encrypted_kek = get_encrypted_kek_from_db(kek_id)
+    dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
+    aes_key = os.urandom(32)
+    aesgcm = AESGCM(dec_kek)
+    nonce = os.urandom(12)
+    encrypted_key = aesgcm.encrypt(nonce, aes_key, None)
+    return base64.b64encode(nonce + encrypted_key).decode("utf-8")
 # ───────────────────────────────────────────────────────
 # ROUTES
 # ───────────────────────────────────────────────────────
@@ -363,6 +395,9 @@ def register():
                     (user_id, first_name, last_name, gender, date_of_birth_str, int(age))
                 )
 
+                encrypted_AES_key = create_encrypted_AES_key(1)
+                cur.execute("INSERT INTO critical.patient_encryption_key VALUES (%s, %s, %s)", (user_id, encrypted_AES_key, 1))
+                print("reached here")
                 conn.commit()
                 flash("Registration successful. Please log in.", "success")
                 return redirect(url_for("login"))

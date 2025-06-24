@@ -97,8 +97,6 @@ VALUES
 INSERT INTO `critical`.admin_encryption_key
 VALUES
 	(4, 'veT5z4a/luOhvkyfH8P0UJ8I0mO1wxE8u/ZOSnct4lZ/IWZ1vl1Ssm1fk1d+foVYR0UerseSrXEQLPgu', 3);
-
-SELECT * FROM `critical`.admin_encryption_key, patient_encryption_key, doctor_priv_key;
-SELECT * FROM `rbac`.patient;
+SELECT * FROM `critical`.`kek`;
 -- Re-enable FK checks
 SET FOREIGN_KEY_CHECKS = 1;
