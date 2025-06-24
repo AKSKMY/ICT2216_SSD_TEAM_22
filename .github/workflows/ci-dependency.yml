@@ -1,4 +1,4 @@
-name: MediVault Combined Dependency Audit
+name: MediVault Combined Security Scan
 
 on:
   push:
@@ -7,14 +7,25 @@ on:
     branches: [main]
 
 jobs:
-  dependency-audit:
+  combined-scan:
     runs-on: ubuntu-latest
-    name: Python + OWASP DC Audit
+    name: Secrets + Dependency Audit
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ------------------------
+      # 1️⃣ Gitleaks Secret Scan
+      # ------------------------
+      - name: Scan for secrets using Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: detect --source=. --verbose --redact
+
+      # ------------------------
+      # 2️⃣ Python Setup
+      # ------------------------
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -23,9 +34,9 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r backend/requirements.txt
 
-      # -------------------------------
-      # 1️⃣ pip-audit (Python-specific)
-      # -------------------------------
+      # ------------------------
+      # 3️⃣ pip-audit
+      # ------------------------
       - name: Install pip-audit
         run: pip install pip-audit
 
@@ -34,9 +45,9 @@ jobs:
           echo "Running pip-audit..."
           pip-audit -r backend/requirements.txt
 
-      # ------------------------------------------
-      # 2️⃣ OWASP Dependency-Check (Static files)
-      # ------------------------------------------
+      # ------------------------
+      # 4️⃣ OWASP Dependency Check
+      # ------------------------
       - name: OWASP Dependency-Check
         uses: dependency-check/Dependency-Check_Action@main
         with:
@@ -50,6 +61,7 @@ jobs:
             --enableRetired
 
       - name: Upload OWASP DC report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
