@@ -23,8 +23,9 @@ services:
     # Only one "volumes:" block—do not repeat this key twice
     volumes:
       - db_data:/var/lib/mysql
-      - ./Database/schema_script.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./Database/data_population.sql:/docker-entrypoint-initdb.d/02_data.sql
+      - ./Database/schema_script.sql:/docker-entrypoint-initdb.d/01_rbac_schema.sql
+      - ./Database/critical.sql:/docker-entrypoint-initdb.d/02_critical_schema.sql
+      - ./Database/data_population.sql:/docker-entrypoint-initdb.d/03_data_population.sql
     secrets:
       - mysql_root_password
       - mysql_app_password
@@ -36,7 +37,7 @@ services:
   # Flask + Gunicorn service
   # ───────────────────────────────────────────────────────────────────────
   flask_app:
-    image: akskmy/ssd_flask_app:v3
+    image: akskmy/ssd_flask_app:v5
     depends_on:
       - db
 
@@ -53,9 +54,14 @@ services:
       - DB_USER=root
       - DB_PASSWORD_FILE=/run/secrets/mysql_root_password
       - DB_NAME=rbac
+      - RECAPTCHA_SITE_KEY_FILE=/run/secrets/RECAPTCHA_SITE_KEY
+      - RECAPTCHA_SECRET_KEY_FILE=/run/secrets/RECAPTCHA_SECRET_KEY
+
 
     secrets:
       - mysql_app_password
+      - RECAPTCHA_SITE_KEY
+      - RECAPTCHA_SECRET_KEY
 
     deploy:
       restart_policy:
@@ -89,4 +95,10 @@ secrets:
     external: true
 
   mysql_app_password:
+    external: true
+
+  RECAPTCHA_SITE_KEY:
+    external: true
+
+  RECAPTCHA_SECRET_KEY:
     external: true
