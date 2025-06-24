@@ -12,7 +12,6 @@ from flask_limiter.util import get_remote_address
 from flask_mail import Mail, Message
 from flask_wtf import CSRFProtect
 import bcrypt
-from datetime import timedelta
 import secrets
 from flask import (
     Flask, send_from_directory, render_template,
@@ -45,15 +44,6 @@ app = Flask(
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
-app.config.update(
-    SESSION_COOKIE_SECURE   = True,
-    SESSION_COOKIE_HTTPONLY = True,
-    SESSION_COOKIE_SAMESITE = "Strict",
-    PERMANENT_SESSION_LIFETIME   = timedelta(minutes=30),
-    SESSION_REFRESH_EACH_REQUEST = True,
-)
-
-
 def secret(name: str, *, default: str = "") -> str:
     """
     Return the secret value for *name*.
@@ -68,27 +58,6 @@ def secret(name: str, *, default: str = "") -> str:
         return Path(f).read_text(encoding="utf-8").strip()
     return os.getenv(name, default)
 
-
-
-# Flask-Mail config (using environment variables)
-app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER')
-app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
-app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'true') == 'true'
-app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
-app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
-app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
-
-mail = Mail(app)
-
-app.config.update(
-    SESSION_COOKIE_SECURE=True,     # Only over HTTPS (for production)
-    SESSION_COOKIE_HTTPONLY=True,   # JS can't access the cookie
-    SESSION_COOKIE_SAMESITE='Lax'   # CSRF protection
-)
-
-# Session config
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=15)
-
 # Default Limiter
 limiter = Limiter(
     get_remote_address,
@@ -102,6 +71,8 @@ if env == "production":
     app.config.from_object(ProductionConfig)
 else:
     app.config.from_object(DevelopmentConfig)
+
+mail = Mail(app)
 
 app.secret_key = app.config.get("SECRET_KEY")
 
