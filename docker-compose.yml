@@ -19,7 +19,7 @@ services:
       #! NORMAL USER CREDENTIALS
       MYSQL_USER: appuser
       MYSQL_PASSWORD_FILE: /run/secrets/mysql_app_password
-
+      
     # Only one "volumes:" block—do not repeat this key twice
     volumes:
       - db_data:/var/lib/mysql
@@ -56,12 +56,13 @@ services:
       - DB_NAME=rbac
       - RECAPTCHA_SITE_KEY_FILE=/run/secrets/RECAPTCHA_SITE_KEY
       - RECAPTCHA_SECRET_KEY_FILE=/run/secrets/RECAPTCHA_SECRET_KEY
-
+      - KEK_MASTER_KEY=/run/secrets/kek_master_key
 
     secrets:
       - mysql_app_password
       - RECAPTCHA_SITE_KEY
       - RECAPTCHA_SECRET_KEY
+      - kek_master_key
 
     deploy:
       restart_policy:

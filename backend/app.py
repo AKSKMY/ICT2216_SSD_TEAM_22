@@ -383,7 +383,7 @@ def login():
 
     site_key = secret("RECAPTCHA_SITE_KEY")
     secret_key = secret("RECAPTCHA_SECRET_KEY")
-
+    
     if request.method == "POST":
         # reCAPTCHA verification
         recaptcha_response = request.form.get("g-recaptcha-response")
