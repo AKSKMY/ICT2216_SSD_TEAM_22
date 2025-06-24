@@ -18,6 +18,7 @@ from flask import (
     Flask, send_from_directory, render_template,
     request, redirect, url_for, flash, session
 )
+from pathlib import Path
 
 #from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import (
@@ -48,6 +49,22 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME   = timedelta(minutes=30),
     SESSION_REFRESH_EACH_REQUEST = True,
 )
+
+
+def secret(name: str, *, default: str = "") -> str:
+    """
+    Return the secret value for *name*.
+
+    1. If an env-var called  <NAME>_FILE  exists, read that file
+       and return its (trimmed) contents.
+    2. Otherwise fall back to the plain env-var  <NAME>.
+    3. If neither is present return *default*.
+    """
+    f = os.getenv(f"{name}_FILE")
+    if f and Path(f).is_file():
+        return Path(f).read_text(encoding="utf-8").strip()
+    return os.getenv(name, default)
+
 
 
 # Flask-Mail config (using environment variables)
@@ -390,8 +407,8 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard"))
 
-    site_key = os.getenv("RECAPTCHA_SITE_KEY")
-    secret_key = os.getenv("RECAPTCHA_SECRET_KEY")
+    site_key = secret("RECAPTCHA_SITE_KEY")
+    secret_key = secret("RECAPTCHA_SECRET_KEY")
 
     if request.method == "POST":
         # reCAPTCHA verification
