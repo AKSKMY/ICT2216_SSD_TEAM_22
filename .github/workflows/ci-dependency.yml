@@ -1,4 +1,5 @@
-name: MediVault Dependency Check (Python Audit)
+name: MediVault Combined Dependency Audit
+
 on:
   push:
     branches: [main]
@@ -6,8 +7,9 @@ on:
     branches: [main]
 
 jobs:
-  pipaudit:
+  dependency-audit:
     runs-on: ubuntu-latest
+    name: Python + OWASP DC Audit
 
     steps:
       - name: Checkout code
@@ -18,11 +20,37 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: pip install -r backend/requirements.txt
 
+      # -------------------------------
+      # 1️⃣ pip-audit (Python-specific)
+      # -------------------------------
       - name: Install pip-audit
         run: pip install pip-audit
 
       - name: Run pip-audit
-        run: pip-audit --requirement backend/requirements.txt
+        run: |
+          echo "Running pip-audit..."
+          pip-audit -r backend/requirements.txt
+
+      # ------------------------------------------
+      # 2️⃣ OWASP Dependency-Check (Static files)
+      # ------------------------------------------
+      - name: OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'medivault'
+          path: 'backend'
+          format: 'HTML'
+          out: 'reports'
+          args: >
+            --enableExperimental
+            --failOnCVSS 7
+            --enableRetired
+
+      - name: Upload OWASP DC report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: reports
