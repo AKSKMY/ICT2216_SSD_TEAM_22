@@ -11,6 +11,20 @@ CREATE SCHEMA IF NOT EXISTS `critical` DEFAULT CHARACTER SET utf8mb4 COLLATE utf
 USE `critical` ;
 
 -- -----------------------------------------------------
+-- Table `critical`.`kek`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `critical`.`kek` ;
+
+CREATE TABLE IF NOT EXISTS `critical`.`kek` (
+  `kek_id` INT NOT NULL AUTO_INCREMENT,
+  `label` VARCHAR(50) NOT NULL,
+  `kek_value` VARCHAR(1024) NOT NULL,
+  PRIMARY KEY (`kek_id`)
+) ENGINE = InnoDB
+  DEFAULT CHARACTER SET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+-- -----------------------------------------------------
 -- Table `critical`.`patient_encryption_key`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `critical`.`patient_encryption_key` ;
@@ -18,7 +32,14 @@ DROP TABLE IF EXISTS `critical`.`patient_encryption_key` ;
 CREATE TABLE IF NOT EXISTS `critical`.`patient_encryption_key` (
   `patient_id` INT NOT NULL,
   `patient_AES_key` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`patient_id`)
+  `kek_id` INT NOT NULL,
+  PRIMARY KEY (`patient_id`),
+  INDEX `fk_kek_patient_idx` (`kek_id` ASC),
+  CONSTRAINT `fk_kek_patient`
+    FOREIGN KEY (`kek_id`)
+    REFERENCES `critical`.`kek` (`kek_id`)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci;
@@ -30,43 +51,60 @@ DROP TABLE IF EXISTS `critical`.`doctor_priv_key` ;
 
 CREATE TABLE IF NOT EXISTS `critical`.`doctor_priv_key` (
   `doctor_id` INT NOT NULL,
-  `private_enc_key` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`doctor_id`)
+  `private_enc_key` TEXT NOT NULL,
+  `kek_id` INT NOT NULL,
+  PRIMARY KEY (`doctor_id`),
+  INDEX `fk_kek_doctor_idx` (`kek_id` ASC),
+  CONSTRAINT `fk_kek_doctor`
+    FOREIGN KEY (`kek_id`)
+    REFERENCES `critical`.`kek` (`kek_id`)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------
--- Table `critical`.`audit_key`
+-- Table `critical`.`admin_encryption_key`
 -- -----------------------------------------------------
-DROP TABLE IF EXISTS `critical`.`audit_key` ;
+DROP TABLE IF EXISTS `critical`.`admin_encryption_key` ;
 
-CREATE TABLE IF NOT EXISTS `critical`.`audit_key` (
-  `log_id` INT NOT NULL,
+CREATE TABLE IF NOT EXISTS `critical`.`admin_encryption_key` (
+  `id` INT NOT NULL AUTO_INCREMENT,
   `admin_AES_key` VARCHAR(255) NOT NULL,
-  PRIMARY KEY (`log_id`)
+  `kek_id` INT NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `fk_kek_admin_idx` (`kek_id` ASC),
+  CONSTRAINT `fk_kek_admin`
+    FOREIGN KEY (`kek_id`)
+    REFERENCES `critical`.`kek` (`kek_id`)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci;
 
--- -----------------------------------------------------
--- Table `critical`.`medical_records_key`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `critical`.`medical_records_key` ;
 
-CREATE TABLE IF NOT EXISTS `critical`.`medical_records_key` (
-  `record_id` INT NOT NULL,
-  `patient_id` INT NOT NULL,
-  PRIMARY KEY (`record_id`),
-  INDEX `patient_FK_idx` (`patient_id` ASC) VISIBLE,
-  CONSTRAINT `patient_FK`
-    FOREIGN KEY (`patient_id`)
-    REFERENCES `critical`.`patient_encryption_key` (`patient_id`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION
+-- -----------------------------------------------------
+-- Table `critical`.`admin_encryption_key`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `critical`.`admin_encryption_key` ;
+
+CREATE TABLE IF NOT EXISTS `critical`.`admin_encryption_key` (
+  `admin_id` INT NOT NULL,
+  `admin_AES_key` VARCHAR(255) NOT NULL,
+  `kek_id` INT NOT NULL,
+  PRIMARY KEY (`admin_id`),
+  INDEX `fk_kek_admin_idx` (`kek_id` ASC),
+  CONSTRAINT `fk_kek_admin`
+    FOREIGN KEY (`kek_id`)
+    REFERENCES `critical`.`kek` (`kek_id`)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci;
+
 
 -- -----------------------------------------------------
 -- Table `critical`.`user_sessions`
