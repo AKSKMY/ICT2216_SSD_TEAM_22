@@ -395,9 +395,8 @@ def register():
                     (user_id, first_name, last_name, gender, date_of_birth_str, int(age))
                 )
 
-                encrypted_AES_key = create_encrypted_AES_key(1)
-                cur.execute("INSERT INTO critical.patient_encryption_key VALUES (%s, %s, %s)", (user_id, encrypted_AES_key, 1))
-                print("reached here")
+                #encrypted_AES_key = create_encrypted_AES_key(1)
+                #cur.execute("INSERT INTO critical.patient_encryption_key VALUES (%s, %s, %s)", (user_id, encrypted_AES_key, 1))
                 conn.commit()
                 flash("Registration successful. Please log in.", "success")
                 return redirect(url_for("login"))
