@@ -70,6 +70,7 @@ services:
       - RECAPTCHA_SITE_KEY
       - RECAPTCHA_SECRET_KEY
       - KEK_MASTER_KEY
+      - MAIL_PASSWORD
 
     deploy:
       restart_policy:
@@ -115,4 +116,7 @@ secrets:
     external: true
 
   KEK_MASTER_KEY:
+    external: true
+
+  MAIL_PASSWORD:
     external: true
