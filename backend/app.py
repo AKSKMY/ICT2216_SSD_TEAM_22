@@ -279,7 +279,7 @@ def get_encrypted_kek_from_db(kek_id):
 
 # Use kek to encrypt the plaintext in order to store it 
 def encrypt_with_kek(plaintext: bytes, kek_id: int):
-    master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
+    master_key = base64.b64decode(secret("KEK_MASTER_KEY"))
     encrypted_kek = get_encrypted_kek_from_db(kek_id)
     dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
     if not dec_kek:

@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, date, timedelta
+from app import secret
 
 class BaseConfig:
     # General Flask Config
@@ -43,6 +44,7 @@ class DevelopmentConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     # Require a real secret key in production, or fail fast
     SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
+    MAIL_PASSWORD = secret("MAIL_PASSWORD")
     if not SECRET_KEY:
         raise RuntimeError("FLASK_SECRET_KEY environment variable must be set in production!")
 

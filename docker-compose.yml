@@ -56,12 +56,12 @@ services:
       - DB_NAME=rbac
       - RECAPTCHA_SITE_KEY_FILE=/run/secrets/RECAPTCHA_SITE_KEY
       - RECAPTCHA_SECRET_KEY_FILE=/run/secrets/RECAPTCHA_SECRET_KEY
-      - KEK_MASTER_KEY=/run/secrets/KEK_MASTER_KEY
+      - KEK_MASTER_KEY_FILE=/run/secrets/KEK_MASTER_KEY
       - MAIL_SERVER=smtp.gmail.com
       - MAIL_PORT=587
       - MAIL_USE_TLS=true
       - MAIL_USERNAME=ict2112project@gmail.com
-      - MAIL_PASSWORD=/run/secrets/MAIL_PASSWORD
+      - MAIL_PASSWORD_FILE=/run/secrets/MAIL_PASSWORD
       - MAIL_DEFAULT_SENDER=MediVault <ict2112project@gmail.com>
 
     secrets:
