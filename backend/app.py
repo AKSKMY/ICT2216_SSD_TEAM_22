@@ -27,6 +27,8 @@ from flask_login import (
 )
 from config import DevelopmentConfig, ProductionConfig
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
 import base64
 
 # ───────────────────────────────────────────────────────
@@ -251,6 +253,7 @@ def is_password_pwned(password):
     hashes = (line.split(":") for line in response.text.splitlines())
     return any(s == suffix for s, _ in hashes)
 
+# Use master key to decrypt encrypted KEK to obtain KEK so it can be used
 def decrypt_with_master_key(encoded_encrypted: str, master_key: bytes) -> bytes:
     aesgcm = AESGCM(master_key)
     encrypted = base64.b64decode(encoded_encrypted)
@@ -260,6 +263,7 @@ def decrypt_with_master_key(encoded_encrypted: str, master_key: bytes) -> bytes:
 
     return aesgcm.decrypt(nonce, ciphertext, None)
 
+# Get encrypted kek from critical database according to kek_id
 def get_encrypted_kek_from_db(kek_id):
     conn = get_db()
     cursor = conn.cursor()
@@ -273,15 +277,48 @@ def get_encrypted_kek_from_db(kek_id):
     finally:
         cursor.close()
 
-def create_encrypted_AES_key(kek_id):
+# Use kek to encrypt the plaintext in order to store it 
+def encrypt_with_kek(plaintext: bytes, kek_id: int):
     master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
     encrypted_kek = get_encrypted_kek_from_db(kek_id)
     dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
-    aes_key = os.urandom(32)
+    if not dec_kek:
+        print("❌ Failed to decrypt KEK.")
+        return None
     aesgcm = AESGCM(dec_kek)
     nonce = os.urandom(12)
-    encrypted_key = aesgcm.encrypt(nonce, aes_key, None)
-    return base64.b64encode(nonce + encrypted_key).decode("utf-8")
+    encrypted = aesgcm.encrypt(nonce, plaintext, None)
+    return base64.b64encode(nonce + encrypted).decode("utf-8")
+
+# Create AES key that is encrypted with appropriate KEK
+def create_encrypted_aes_key(kek_id):
+    aes_key = os.urandom(32)
+    return encrypt_with_kek(aes_key, kek_id)
+
+# Create RSA key that is encrypted with appropriate KEK    
+def create_encrypted_RSA_key():
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    private_bytes = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+    return encrypt_with_kek(private_bytes, 2)
+
+# Function to view table for debugging    
+def view_table_data(table_name):
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(f"SELECT * FROM {table_name}")
+        rows = cur.fetchall()
+        print(f"\n📋 Data in `{table_name}`:")
+        for row in rows:
+            print(row)
+    except Exception as e:
+        print(f"❌ Error reading table `{table_name}`:", e)
+    finally:
+        cur.close()
 # ───────────────────────────────────────────────────────
 # ROUTES
 # ───────────────────────────────────────────────────────
@@ -395,8 +432,8 @@ def register():
                     (user_id, first_name, last_name, gender, date_of_birth_str, int(age))
                 )
 
-                #encrypted_AES_key = create_encrypted_AES_key(1)
-                #cur.execute("INSERT INTO critical.patient_encryption_key VALUES (%s, %s, %s)", (user_id, encrypted_AES_key, 1))
+                encrypted_aes_key = create_encrypted_aes_key(1)
+                cur.execute("INSERT INTO critical.patient_encryption_key VALUES (%s, %s, %s)", (user_id, encrypted_aes_key, 1))
                 conn.commit()
                 flash("Registration successful. Please log in.", "success")
                 return redirect(url_for("login"))
@@ -854,6 +891,10 @@ def create_account():
                     cur.execute("""INSERT INTO rbac.nurse (user_Id, first_name, last_name, age, gender)
                                    VALUES (%s, %s, %s, %s, %s)""",
                                 (user_id, first_name, last_name, int(age), gender))
+
+                # Generate RSA key if Doctor
+                if role_name == "Doctor":
+                    encrypted_rsa_key = create_encrypted_RSA_key()
 
                 conn.commit()
                 flash(f"{role_name} account created successfully!", "success")
