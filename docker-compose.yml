@@ -37,7 +37,7 @@ services:
   # Flask + Gunicorn service
   # ───────────────────────────────────────────────────────────────────────
   flask_app:
-    image: akskmy/ssd_flask_app:v6
+    image: akskmy/ssd_flask_app:v7
     depends_on:
       - db
 
@@ -49,7 +49,7 @@ services:
 
     environment:
       - FLASK_ENV=production
-      - FLASK_SECRET_KEY=Your_Very_Strong_Secret_Key_MEDIVAULT!
+      - FLASK_SECRET_KEY=/run/secrets/FLASK_SECRET_KEY
       - DB_HOST=db
       - DB_USER=root
       - DB_PASSWORD_FILE=/run/secrets/mysql_root_password
@@ -59,6 +59,7 @@ services:
       - KEK_MASTER_KEY=/run/secrets/KEK_MASTER_KEY
 
     secrets:
+      - FLASK_SECRET_KEY
       - mysql_app_password
       - RECAPTCHA_SITE_KEY
       - RECAPTCHA_SECRET_KEY
@@ -96,6 +97,9 @@ secrets:
     external: true
 
   mysql_app_password:
+    external: true
+
+  FLASK_SECRET_KEY:
     external: true
 
   RECAPTCHA_SITE_KEY:
