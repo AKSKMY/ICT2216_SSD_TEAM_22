@@ -7,25 +7,11 @@ on:
     branches: [main]
 
 jobs:
-  flask-and-ui-test:
+  medivault-test-cases:
     runs-on: ubuntu-latest
 
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: admin
-          MYSQL_DATABASE: rbac
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=20
-
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -33,56 +19,33 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
+      - name: Install project dependencies
+        run: pip install -r backend/requirements.txt
 
-      - name: Wait for MySQL to be ready
+      - name: Start Flask & MySQL with Docker Compose
+        run: docker-compose -f docker-compose.yml up -d --build
+
+      - name: Wait for Flask to start
         run: |
+          echo "Waiting for Flask..."
           for i in {1..10}; do
-            mysql -h 127.0.0.1 -u root -padmin -e "SELECT 1" && break
-            echo "Waiting for MySQL..."
-            sleep 5
+            curl --fail http://localhost:5000/ && echo "✅ Flask is up!" && exit 0
+            echo "⏳ Waiting ($i)..."
+            sleep 3
           done
+          echo "❌ Flask did not start."
+          docker-compose logs
+          exit 1
 
-      - name: Build Flask app image
-        run: docker build -t medivault-app .
-
-      - name: Run Flask container
-        run: |
-          docker run -d --name flask-app \
-            -p 5000:5000 \
-            -v ${{ github.workspace }}/backend:/app \
-            -w /app \
-            -e FLASK_SECRET_KEY=testsecret \
-            -e FLASK_ENV=development \
-            -e MAIL_USERNAME=fake@example.com \
-            -e MAIL_PASSWORD=dummy \
-            -e MAIL_DEFAULT_SENDER=fake@example.com \
-            -e DB_HOST=127.0.0.1 \
-            -e DB_USER=root \
-            -e DB_PASSWORD=admin \
-            -e DB_NAME=rbac \
-            -e RECAPTCHA_SITE_KEY=test \
-            -e RECAPTCHA_SECRET_KEY=test \
-            medivault-app \
-            python app.py
-
-      - name: Wait for Flask app to boot
-        run: sleep 5
-
-      - name: Test Website Connection (/)
-        run: curl --fail http://localhost:5000/
-
-      - name: Test DB Connection (/test-db)
-        run: curl --fail http://localhost:5000/test-db
-
-      - name: Install Chromium and test dependencies
+      - name: Install Chrome and Selenium
         run: |
           sudo apt update
           sudo apt install -y chromium-browser chromium-chromedriver
-          pip install -r backend/requirements.txt
+          pip install selenium
 
-      - name: Run Selenium UI test for /register
+      - name: Run Selenium Test
         run: python backend/tests/test_register_ui.py
+
+      - name: Tear down containers
+        if: always()
+        run: docker-compose down
