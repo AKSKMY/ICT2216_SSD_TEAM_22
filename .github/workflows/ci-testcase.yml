@@ -46,6 +46,7 @@ jobs:
           -e MAIL_USERNAME=fake@example.com \
           -e MAIL_PASSWORD=dummy \
           -e MAIL_DEFAULT_SENDER=fake@example.com \
+          -e MAIL_SERVER=smtp.example.com \
           -e RECAPTCHA_SITE_KEY=test \
           -e RECAPTCHA_SECRET_KEY=test \
           medivault-app \
