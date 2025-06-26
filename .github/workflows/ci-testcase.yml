@@ -47,7 +47,7 @@ jobs:
           done
 
       - name: Build Flask app image
-        run: docker build -t medivault-app ./backend
+        run: docker build -t medivault-app .
 
       - name: Run Flask container
         run: |
