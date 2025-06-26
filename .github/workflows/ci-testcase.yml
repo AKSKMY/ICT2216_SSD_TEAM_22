@@ -52,7 +52,7 @@ jobs:
       - name: Run Flask container
         run: |
           docker run -d --name flask-app \
-            --network host \
+            -p 5000:5000 \
             -v ${{ github.workspace }}/backend:/app \
             -w /app \
             -e FLASK_SECRET_KEY=testsecret \
@@ -70,7 +70,7 @@ jobs:
             python app.py
 
       - name: Wait for Flask app to boot
-        run: sleep 20
+        run: sleep 5
 
       - name: Test Website Connection (/)
         run: curl --fail http://localhost:5000/
