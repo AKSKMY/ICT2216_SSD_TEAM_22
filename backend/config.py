@@ -54,7 +54,7 @@ class BaseConfig:
 
 
 class DevelopmentConfig(BaseConfig):
-    # local fallbacks for “works out of the box”
+    # local fallbacks for ï¿½works out of the boxï¿½
     DB_HOST     = os.getenv("DB_HOST",     "localhost")
     DB_USER     = os.getenv("DB_USER",     "root")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")
