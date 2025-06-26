@@ -37,7 +37,7 @@ services:
   # Flask + Gunicorn service
   # ───────────────────────────────────────────────────────────────────────
   flask_app:
-    image: akskmy/ssd_flask_app:v7
+    image: akskmy/ssd_flask_app:v8
     depends_on:
       - db
 
@@ -66,11 +66,12 @@ services:
 
     secrets:
       - FLASK_SECRET_KEY
-      - mysql_app_password
-      - RECAPTCHA_SITE_KEY
-      - RECAPTCHA_SECRET_KEY
       - KEK_MASTER_KEY
       - MAIL_PASSWORD
+      - RECAPTCHA_SECRET_KEY
+      - RECAPTCHA_SITE_KEY
+      - mysql_app_password
+      - mysql_root_password
 
     deploy:
       restart_policy:
