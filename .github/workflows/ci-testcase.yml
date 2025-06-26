@@ -7,45 +7,69 @@ on:
     branches: [main]
 
 jobs:
-  medivault-test-cases:
-    runs-on: ubuntu-latest
+  flask-and-ui-test:
+    runs-on: ubuntu-22.04
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: admin
+          MYSQL_DATABASE: rbac
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+    - name: Build Docker image for Flask
+      run: docker build -t medivault-app .
 
-      - name: Install project dependencies
-        run: pip install -r backend/requirements.txt
+    - name: Run Flask container
+      run: |
+        docker run -d --name flask-app \
+          --network host \
+          -v ${{ github.workspace }}/backend:/app \
+          -w /app \
+          -e FLASK_SECRET_KEY=testsecret \
+          -e FLASK_ENV=development \
+          -e DB_HOST=127.0.0.1 \
+          -e DB_USER=root \
+          -e DB_PASSWORD=admin \
+          -e DB_NAME=rbac \
+          -e MAIL_USERNAME=fake@example.com \
+          -e MAIL_PASSWORD=dummy \
+          -e MAIL_DEFAULT_SENDER=fake@example.com \
+          -e RECAPTCHA_SITE_KEY=test \
+          -e RECAPTCHA_SECRET_KEY=test \
+          medivault-app \
+          python app.py
+    
+    - name: Wait for Flask app to boot
+      run: sleep 10
 
-      - name: Start Flask & MySQL with Docker Compose
-        run: docker-compose -f docker-compose.yml up -d --build
+    - name: Test Website Connection
+      run: curl --fail http://localhost:5000/
 
-      - name: Wait for Flask to start
-        run: |
-          echo "Waiting for Flask..."
-          for i in {1..10}; do
-            curl --fail http://localhost:5000/ && echo "✅ Flask is up!" && exit 0
-            echo "⏳ Waiting ($i)..."
-            sleep 3
-          done
-          echo "❌ Flask did not start."
-          docker-compose logs
-          exit 1
+    - name: Test DB Connection
+      run: curl --fail http://localhost:5000/test-db
 
-      - name: Install Chrome and Selenium
-        run: |
-          sudo apt update
-          sudo apt install -y chromium-browser chromium-chromedriver
-          pip install selenium
+    - name: Install Chromium and test dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y chromium-browser chromium-chromedriver
+        pip install -r backend/requirements.txt
 
-      - name: Run Selenium Test
-        run: python backend/tests/test_register_ui.py
+    - name: Run Selenium UI test for /register
+      run: python backend/tests/test_register_ui.py
 
-      - name: Tear down containers
-        if: always()
-        run: docker-compose down
+    - name: Show Flask logs if tests fail
+      if: failure()
+      run: docker logs flask-app
+
