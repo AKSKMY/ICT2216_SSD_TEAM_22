@@ -38,15 +38,16 @@ jobs:
           -v ${{ github.workspace }}/backend:/app \
           -w /app \
           -e FLASK_SECRET_KEY=testsecret \
-          -e FLASK_ENV=development \
+          -e MAIL_SERVER=smtp.gmail.com \
+          -e MAIL_PORT=587 \
+          -e MAIL_USE_TLS=true \
+          -e MAIL_USERNAME=fake@example.com \
+          -e MAIL_PASSWORD=dummy \
+          -e MAIL_DEFAULT_SENDER=fake@example.com \
           -e DB_HOST=127.0.0.1 \
           -e DB_USER=root \
           -e DB_PASSWORD=admin \
           -e DB_NAME=rbac \
-          -e MAIL_USERNAME=fake@example.com \
-          -e MAIL_PASSWORD=dummy \
-          -e MAIL_DEFAULT_SENDER=fake@example.com \
-          -e MAIL_SERVER=smtp.example.com \
           -e RECAPTCHA_SITE_KEY=test \
           -e RECAPTCHA_SECRET_KEY=test \
           medivault-app \
