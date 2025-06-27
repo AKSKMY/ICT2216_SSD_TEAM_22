@@ -37,7 +37,7 @@ services:
   # Flask + Gunicorn service
   # ───────────────────────────────────────────────────────────────────────
   flask_app:
-    image: akskmy/ssd_flask_app:v8
+    image: akskmy/ssd_flask_app:latest 
     depends_on:
       - db
 
