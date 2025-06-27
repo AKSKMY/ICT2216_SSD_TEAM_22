@@ -6,6 +6,19 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app import app as flask_app
 
+os.environ.setdefault("FLASK_SECRET_KEY", "testsecret")
+os.environ.setdefault("MAIL_SERVER", "smtp.gmail.com")
+os.environ.setdefault("MAIL_PORT", "587")
+os.environ.setdefault("MAIL_USE_TLS", "true")
+os.environ.setdefault("MAIL_USERNAME", "fake@example.com")
+os.environ.setdefault("MAIL_PASSWORD", "dummy")
+os.environ.setdefault("MAIL_DEFAULT_SENDER", "fake@example.com")
+os.environ.setdefault("DB_HOST", "127.0.0.1")
+os.environ.setdefault("DB_USER", "root")
+os.environ.setdefault("DB_PASSWORD", "admin")
+os.environ.setdefault("DB_NAME", "rbac")
+os.environ.setdefault("RECAPTCHA_SITE_KEY", "test")
+os.environ.setdefault("RECAPTCHA_SECRET_KEY", "test")
 
 @pytest.fixture
 def client():
