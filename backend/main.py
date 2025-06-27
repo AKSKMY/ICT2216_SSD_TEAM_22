@@ -2,8 +2,8 @@ import os
 import re
 from dotenv import load_dotenv
 
-from backend.app import app
-from backend.routes.init import register_blueprints
+from app import app
+from routes.init import register_blueprints
 
 load_dotenv()
 
