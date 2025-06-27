@@ -251,7 +251,8 @@ def is_password_pwned(password):
     url = f"https://api.pwnedpasswords.com/range/{prefix}"
     response = requests.get(url)
     if response.status_code != 200:
-        return False  # Assume safe if the API fails
+        # Assume safe if the API fails
+        return False  
     hashes = (line.split(":") for line in response.text.splitlines())
     return any(s == suffix for s, _ in hashes)
 

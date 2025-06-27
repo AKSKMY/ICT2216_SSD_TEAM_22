@@ -43,10 +43,21 @@ jobs:
         script: |
           cd project/compose
           git pull
+
           sudo docker build -t akskmy/ssd_flask_app:latest .
           sudo docker push akskmy/ssd_flask_app:latest
-          sudo docker stop $(sudo docker ps -q)
-          sudo docker stack rm my_stack
-          sudo docker volume rm my_stack_db_data compose_db_data db_data
+
+          container=$(sudo docker ps -q)  
+
+          if [ -n "$container" ]; then   
+            sudo docker stop $container
+          fi
+
+          sudo docker stack rm my_stack || true 
+
+          # Remove volumes (will error if they don't exist, so might want to add '|| true')
+          sudo docker volume rm my_stack_db_data compose_db_data db_data || true
+
           sudo docker stack deploy -c docker-compose.yml my_stack
+
 
