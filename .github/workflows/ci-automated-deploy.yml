@@ -64,7 +64,7 @@ jobs:
           sudo docker volume rm db_data 2>/dev/null || true
 
           # Create network if not exists
-          if ! sudo docker network inspect my_stack_app_net >/dev/null 2>&1; then
+          if ! sudo docker network ls --format '{{.Name}}' | grep -q "^my_stack_app_net$"; then
             sudo docker network create --driver overlay my_stack_app_net
           fi
 
