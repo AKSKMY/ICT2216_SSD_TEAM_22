@@ -68,6 +68,19 @@ try:
         errors = driver.find_elements(By.CLASS_NAME, "text-danger")
         for err in errors:
             print(" -", err.text)
+            
+    # Sleep longer than session timeout (e.g., 31 mins if timeout is 30 mins)
+    print("💤 Waiting for session to expire...")
+    time.sleep(960)  # 31 minutes
+
+    # Try accessing a protected route
+    driver.get("http://localhost:5000/dashboard")
+
+    # Check for login page redirect or session expired flash message
+    if "login" in driver.current_url or "Session expired" in driver.page_source:
+        print("✅ Session expired and redirected to login.")
+    else:
+        print("❌ Session did not expire as expected.")
 
 except Exception as e:
     print("❌ Exception during test:", e)
