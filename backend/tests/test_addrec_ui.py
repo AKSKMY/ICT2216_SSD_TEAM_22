@@ -70,7 +70,6 @@ try:
             print(" -", err.text)
 
 except Exception as e:
-    driver.save_screenshot("add_record_error.png")
     print("❌ Exception during test:", e)
 
 finally:
