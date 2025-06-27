@@ -42,6 +42,7 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           cd project/compose
+          git pull
           sudo docker build -t akskmy/ssd_flask_app:latest .
           sudo docker push akskmy/ssd_flask_app:latest
           sudo docker stop $(sudo docker ps -q)
