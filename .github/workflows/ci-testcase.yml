@@ -84,11 +84,11 @@ jobs:
         sudo apt install -y chromium-browser chromium-chromedriver
         pip install -r backend/requirements.txt
 
-    - name: Run Register Unit Tests
-      run: pytest backend/tests/test_register_unit.py --tb=short -v
-
-    - name: Run Selenium UI test for /register
+    - name: Run 'Register' Testcase
       run: python backend/tests/test_register_ui.py
+
+    - name: Run 'Add Record' Testcase
+      run: python backend/tests/test_addrec_ui.py
 
     - name: Show Flask logs if tests fail
       if: failure()
