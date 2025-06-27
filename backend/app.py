@@ -30,7 +30,6 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 import base64
-from email_validator import validate_email, EmailNotValidError
 
 # ───────────────────────────────────────────────────────
 # FLASK APP CONFIGURATION

@@ -38,7 +38,8 @@ try:
     gender_dropdown.select_by_visible_text("Other")
 
     driver.find_element(By.ID, "age").send_keys("30")
-    driver.find_element(By.ID, "date_of_birth").send_keys("1995-05-10")
+    date_value = "1995-05-10"
+    driver.execute_script(f"document.getElementById('date_of_birth').value = '{date_value}'")
 
     # Submit form
     submit_button = driver.find_element(By.XPATH, '//button[@type="submit"]')

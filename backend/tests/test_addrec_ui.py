@@ -34,7 +34,8 @@ try:
 
     # ✅ 3. Fill and submit the form
     driver.find_element(By.ID, "diagnosis").send_keys("UI test: patient is doing well.")
-    driver.find_element(By.ID, "date").send_keys(date.today().isoformat())
+    today_str = date.today().isoformat()
+    driver.execute_script(f"document.getElementById('date').value = '{today_str}'")
 
     patient_id_elem = driver.find_element(By.NAME, "patient_id")
     assert patient_id_elem.get_attribute("value") == "1"
@@ -53,7 +54,7 @@ try:
     # ✅ 5. Check final URL
     final_url = driver.current_url
     print("🔗 Final URL:", final_url)
-    
+
     if final_url == EXPECTED_REDIRECT:
         print("✅ Add Record test passed: Redirected to expected patient records page.")
     else:
