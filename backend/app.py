@@ -245,9 +245,9 @@ def log_action(user_id, description):
         conn.close()
 
 def is_password_pwned(password):
-    sha256 = hashlib.sha256(password.encode('utf-8')).hexdigest().upper()
-    prefix = sha256[:5]
-    suffix = sha256[5:]
+    sha1 = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()  # noqa: B324  # SHA1 required for HIBP API
+    prefix = sha1[:5]
+    suffix = sha1[5:]
     url = f"https://api.pwnedpasswords.com/range/{prefix}"
     response = requests.get(url)
     if response.status_code != 200:
