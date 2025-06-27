@@ -28,7 +28,7 @@ try:
     # Fill account credentials
     driver.find_element(By.ID, "username").send_keys("seleniumtestuser")
     driver.find_element(By.ID, "email").send_keys("selenium@example.com")
-    driver.find_element(By.ID, "password").send_keys("StrongPassword123")
+    driver.find_element(By.ID, "password").send_keys("Strong@Password123")
 
     # Fill personal info
     driver.find_element(By.ID, "first_name").send_keys("Selenium")

@@ -90,6 +90,6 @@ jobs:
     - name: Run 'Add Record' Testcase
       run: python backend/tests/test_addrec_ui.py
 
-    - name: Show Flask logs if tests fail
-      if: failure()
+    - name: Flask Logs
+      if: always()
       run: docker logs flask-app
