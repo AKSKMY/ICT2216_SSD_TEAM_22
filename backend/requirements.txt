@@ -13,3 +13,5 @@ Flask-Mail
 bcrypt
 flask_wtf
 urllib3==2.5.0
+pytest
+beautifulsoup4

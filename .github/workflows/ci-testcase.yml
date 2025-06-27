@@ -68,6 +68,9 @@ jobs:
         sudo apt install -y chromium-browser chromium-chromedriver
         pip install -r backend/requirements.txt
 
+    - name: Run unit tests for /register
+      run: pytest backend/tests/test_register_unit.py --tb=short -v
+
     - name: Run Selenium UI test for /register
       run: python backend/tests/test_register_ui.py
 

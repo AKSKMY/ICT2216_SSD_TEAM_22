@@ -1088,7 +1088,7 @@ def add_medical_record(patient_id):
             log_action(current_user.id, f"Doctor added a medical record for patient ID {patient_id}.")
 
         flash("Medical record added successfully!", "success")
-        return redirect(url_for('view_patient_records', patient_id=patient_id))
+        return redirect(url_for('doctor_view_patient_records', patient_id=patient_id))
 
     return render_template('doctor_addRecord.html', patient_id=patient_id)
 
@@ -1144,7 +1144,7 @@ def edit_medical_record(record_id):
             log_action(current_user.id, f"Doctor edited medical record ID {record_id}.")
 
         flash("Medical record updated successfully!", "success")
-        return redirect(url_for('view_patient_records', patient_id=record['patient_id']))
+        return redirect(url_for('doctor_view_patient_records', patient_id=record['patient_id']))
 
     return render_template('doctor_editRecord.html', record=record)
 

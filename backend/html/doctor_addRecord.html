@@ -20,7 +20,7 @@
     <input type="hidden" name="patient_id" value="{{ patient_id }}">
 
     <button type="submit" class="btn btn-primary">Submit</button>
-    <a href="{{ url_for('view_patient_records', patient_id=patient_id) }}" class="btn btn-secondary ms-2">Cancel</a>
+    <a href="{{ url_for('doctor_view_patient_records', patient_id=patient_id) }}" class="btn btn-secondary ms-2">Cancel</a>
   </form>
 </div>
 {% endblock %}
