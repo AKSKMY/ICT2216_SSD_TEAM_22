@@ -480,7 +480,7 @@ def login():
                 return render_template("login.html")
             return redirect(url_for("verify_otp"))
         else:
-            log_action(None, f"Login attempt from IP {ip} for username '{username}'")
+            log_action(row["user_Id"], f"Login attempt from IP {ip} for username '{username}'")
             flash("Invalid username or password.", "error")
 
     return render_template("login.html", site_key=site_key)
