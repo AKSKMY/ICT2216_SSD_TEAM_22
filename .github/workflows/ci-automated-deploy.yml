@@ -44,22 +44,26 @@ jobs:
           cd project/compose
           git pull
 
-          # Stop and clean up any existing containers
-          sudo docker stop $(sudo docker ps -q) || true
-          sudo docker rm $(sudo docker ps -a -q) || true
+          # Stop and remove running containers safely
+          if [ "$(sudo docker ps -q)" ]; then sudo docker stop $(sudo docker ps -q); fi
+          if [ "$(sudo docker ps -aq)" ]; then sudo docker rm $(sudo docker ps -aq); fi
 
-          # Pull the latest image (you already pushed it above)
+          # Pull the latest image
           sudo docker pull akskmy/ssd_flask_app:latest
 
-          # Remove the stack
+          # Remove old stack (ignore if not running)
           sudo docker stack rm my_stack
-          sleep 5  # wait for services to shut down
+          sleep 5
 
-          # Remove volumes (ignore errors if not found or in use)
-          sudo docker volume rm my_stack_db_data compose_db_data db_data || true
+          # Remove volumes (skip if not found)
+          sudo docker volume rm my_stack_db_data || true
+          sudo docker volume rm compose_db_data || true
+          sudo docker volume rm db_data || true
 
           # Ensure network exists
-          sudo docker network create my_stack_app_net || true
+          if ! sudo docker network inspect my_stack_app_net > /dev/null 2>&1; then
+            sudo docker network create my_stack_app_net
+          fi
 
-          # Deploy stack
+          # Deploy the new stack
           sudo docker stack deploy -c docker-compose.yml --detach=false my_stack
