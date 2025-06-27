@@ -27,8 +27,7 @@ jobs:
       RECAPTCHA_SECRET_KEY: test
 
       # ✅ Add these lines below to force test mode
-      FLASK_ENV: development
-      FLASK_CONFIG: testing
+      FLASK_ENV: testing
       FLASK_APP: app.py
 
     services:
@@ -48,6 +47,33 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+
+    - name: Wait for MySQL to be ready
+      run: |
+        for i in {1..10}; do
+          if mysqladmin ping -h 127.0.0.1 --user=root --password=admin --silent; then
+            echo "MySQL is ready!"
+            break
+          fi
+          echo "Waiting for MySQL..."
+          sleep 5
+        done
+
+    - name: Run schema_script.sql
+      run: |
+        mysql -h 127.0.0.1 -u root -padmin rbac < Database/schema_script.sql
+
+    - name: Run critical.sql
+      run: |
+        mysql -h 127.0.0.1 -u root -padmin rbac < Database/critical.sql
+
+    - name: Run data_population.sql
+      run: |
+        mysql -h 127.0.0.1 -u root -padmin rbac < Database/data_population.sql
+
+    - name: Check DB Content (optional debug)
+      run: |
+        mysql -h 127.0.0.1 -u root -padmin -e "USE rbac; SELECT COUNT(*) FROM your_table_name;"
 
     - name: Build Docker image for Flask
       run: docker build -t medivault-app .
