@@ -58,6 +58,8 @@ jobs:
           # Remove volumes (will error if they don't exist, so might want to add '|| true')
           sudo docker volume rm my_stack_db_data compose_db_data db_data || true
 
+          sudo docker network create --driver overlay my_stack_app_net || true
+
           sudo docker stack deploy -c docker-compose.yml my_stack
 
 
