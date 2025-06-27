@@ -279,16 +279,20 @@ def get_encrypted_kek_from_db(kek_id):
 
 # Use kek to encrypt the plaintext in order to store it 
 def encrypt_with_kek(plaintext: bytes, kek_id: int):
-    master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
-    encrypted_kek = get_encrypted_kek_from_db(kek_id)
-    dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
-    if not dec_kek:
-        print("❌ Failed to decrypt KEK.")
-        return None
-    aesgcm = AESGCM(dec_kek)
-    nonce = os.urandom(12)
-    encrypted = aesgcm.encrypt(nonce, plaintext, None)
-    return base64.b64encode(nonce + encrypted).decode("utf-8")
+    try:
+        master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
+        encrypted_kek = get_encrypted_kek_from_db(kek_id)
+        dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
+        if not dec_kek:
+            print("❌ Failed to decrypt KEK.")
+            return None
+        aesgcm = AESGCM(dec_kek)
+        nonce = os.urandom(12)
+        encrypted = aesgcm.encrypt(nonce, plaintext, None)
+        return base64.b64encode(nonce + encrypted).decode("utf-8")
+    except Exception as e:
+        return(f"❌ Error! Check with admin")
+        
 
 # Create AES key that is encrypted with appropriate KEK
 def create_encrypted_aes_key(kek_id):
@@ -304,6 +308,72 @@ def create_encrypted_RSA_key():
             encryption_algorithm=serialization.NoEncryption()
         )
     return encrypt_with_kek(private_bytes, 2)
+
+def get_encrypted_key(user_id, user_role):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        if (user_role == "Doctor"):
+            cursor.execute("SELECT private_enc_key FROM critical.doctor_priv_key WHERE doctor_id = %s", (user_id,))
+            result = cursor.fetchone()
+            if result is None:
+                raise ValueError(f"KEK with id {user_id} not found in the database.")
+            return result['private_enc_key']  # the base64 string
+        elif (user_role == "Patient"):
+            cursor.execute("SELECT patient_AES_key FROM critical.patient_encryption_key WHERE patient_id = %s", (user_id,))
+            result = cursor.fetchone()
+            if result is None:
+                raise ValueError(f"KEK with id {user_id} not found in the database.")
+            return result['patient_AES_key']  # the base64 string
+        elif (user_role == "Admin"):
+            cursor.execute("SELECT admin_AES_key FROM critical.admin_encryption_key WHERE id = %s", (user_id,))
+            result = cursor.fetchone()
+            if result is None:
+                raise ValueError(f"KEK with id {user_id} not found in the database.")
+            return result['admin_AES_key']  # the base64 string
+        else:
+            print("Your role does not have a key.")
+    finally:
+        cursor.close()
+
+def decrypt_with_aes(enc_key, dec_kek):
+    encrypted = base64.b64decode(enc_key)
+    nonce = encrypted[:12]
+    ciphertext = encrypted[12:]
+    aesgcm = AESGCM(dec_kek)
+    return aesgcm.decrypt(nonce, ciphertext, None)
+        
+def encrypt_with_aes_key(aes_key, plaintext):
+    aesgcm = AESGCM(aes_key)
+    nonce = os.urandom(12)
+    ciphertext = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), None)
+    return base64.b64encode(nonce + ciphertext).decode("utf-8")
+
+def encrypt_medical_records(patient_id, plaintext):
+    try:
+        master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
+        encrypted_kek = get_encrypted_kek_from_db(1)
+        dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
+        enc_key = get_encrypted_key(patient_id, "Patient")
+        patient_key = decrypt_with_aes(enc_key, dec_kek)
+        return encrypt_with_aes_key(patient_key, plaintext)
+    except Exception as e:
+        return(f"❌ Error! Check with admin")
+        
+def decrypt_AES_cipher(ciphertext, user_id, user_role):
+    try:
+        master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
+        if user_role == "Patient":
+            user_role_number = 1
+        elif user_role == "Admin":
+            user_role_number = 3
+        encrypted_kek = get_encrypted_kek_from_db(user_role_number)
+        dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
+        enc_key = get_encrypted_key(user_id, user_role)
+        user_key = decrypt_with_aes(enc_key, dec_kek)
+        return decrypt_with_aes(ciphertext, user_key).decode("utf-8")
+    except Exception as e:
+        return(f"❌ Error! Check with admin")
 
 # Function to view table for debugging    
 def view_table_data(table_name):
@@ -981,6 +1051,12 @@ def nurse_view_patient_records(patient_id):
             ORDER BY mr.date DESC
         """, (patient_id,))
         records = cur.fetchall()
+        for record in records:
+            try:
+                record["diagnosis"] = decrypt_AES_cipher(record["diagnosis"], record["patient_id"], "Patient")
+            except Exception as e:
+                record["diagnosis"] = "[Decryption failed]"
+                print(f"Decryption error for record {record['record_id']}: {e}")
 
     return render_template("medicalRecord.html", records=records, patient_id=patient_id)
 
@@ -1038,7 +1114,12 @@ def doctor_view_patient_records(patient_id):
             ORDER BY mr.date DESC
         """, (patient_id, current_user.id))
         records = cur.fetchall()
-
+        for record in records:
+            try:
+                record["diagnosis"] = decrypt_AES_cipher(record["diagnosis"], patient_id, "Patient")
+            except Exception as e:
+                record["diagnosis"] = "[Decryption failed]"
+                print(f"Decryption error for record {record['record_id']}: {e}")
     return render_template("medicalRecord.html", records=records, patient_id=patient_id)
 
 
@@ -1078,6 +1159,9 @@ def add_medical_record(patient_id):
             if not cur.fetchone():
                 flash("Patient not found.", "error")
                 return redirect(url_for("dashboard"))
+            
+            # Encrypt the diagnosis with patient's AES key
+            diagnosis = encrypt_medical_records(patient_id, diagnosis)
 
             # Insert medical record
             cur.execute("""
@@ -1109,11 +1193,15 @@ def edit_medical_record(record_id):
             WHERE record_id = %s AND doctor_id = %s
         """, (record_id, current_user.id))
         record = cur.fetchone()
-
+        try:
+            record["diagnosis"] = decrypt_AES_cipher(record["diagnosis"], record["patient_id"], "Patient")
+        except Exception as e:
+            record["diagnosis"] = "[Decryption failed]"
+            print(f"Decryption error for record {record['record_id']}: {e}")
     if not record:
         flash("Medical record not found or access denied.", "error")
         return redirect(url_for("dashboard"))
-
+    
     if request.method == 'POST':
         diagnosis = request.form.get('diagnosis', '').strip()
         date_str = request.form.get('date', '').strip()
@@ -1253,7 +1341,12 @@ def view_medicalRecords():
             ORDER BY mr.date DESC
         """, (patient_id,))
         records = cur.fetchall()
-
+        for record in records:
+            try:
+                record["diagnosis"] = decrypt_AES_cipher(record["diagnosis"], current_user.id, "Patient")
+            except Exception as e:
+                record["diagnosis"] = "[Decryption failed]"
+                print(f"Decryption error for record {record['record_id']}: {e}")
     return render_template('medicalRecord.html', records=records)
 
 # logout
