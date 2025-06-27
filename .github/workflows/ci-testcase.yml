@@ -73,7 +73,7 @@ jobs:
 
     - name: Check DB Content (optional debug)
       run: |
-        mysql -h 127.0.0.1 -u root -padmin -e "USE rbac; SELECT COUNT(*) FROM your_table_name;"
+        mysql -h 127.0.0.1 -u root -padmin -e "USE rbac; SELECT COUNT(*) FROM user;"
 
     - name: Build Docker image for Flask
       run: docker build -t medivault-app .
