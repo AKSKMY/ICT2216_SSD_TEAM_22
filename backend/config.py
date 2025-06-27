@@ -110,4 +110,5 @@ class ProductionConfig(BaseConfig):
 
 class TestingConfig(BaseConfig):
     TESTING = True
+    DEBUG = True
     WTF_CSRF_ENABLED = False

@@ -58,6 +58,8 @@ jobs:
           --network host \
           -v ${{ github.workspace }}/backend:/app \
           -w /app \
+          -e FLASK_ENV=testing \
+          -e TESTING=true \
           -e FLASK_SECRET_KEY=$FLASK_SECRET_KEY \
           -e MAIL_SERVER=$MAIL_SERVER \
           -e MAIL_PORT=$MAIL_PORT \

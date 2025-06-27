@@ -322,7 +322,9 @@ def view_table_data(table_name):
     finally:
         cur.close()
 
-
+# ───────────────────────────────────────────────────────
+# TESTING ROUTES
+# ───────────────────────────────────────────────────────
 @app.route("/test-login-doctor")
 def test_login_doctor():
     if not current_app.config.get("TESTING", False):
