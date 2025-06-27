@@ -41,11 +41,33 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          cd project/compose
+          cd project/compose || exit 1
           git pull
+
+          # Build and push Docker image
           sudo docker build -t akskmy/ssd_flask_app:latest .
           sudo docker push akskmy/ssd_flask_app:latest
-          sudo docker stop $(sudo docker ps -q)
+
+          # Stop running containers if any
+          CONTAINERS=$(sudo docker ps -q)
+          if [ -n "$CONTAINERS" ]; then
+            sudo docker stop $CONTAINERS
+          fi
+
+          # Remove stack and wait for cleanup
           sudo docker stack rm my_stack
-          sudo docker volume rm my_stack_db_data compose_db_data db_data
-          sudo docker stack deploy -c docker-compose.yml my_stack
+          sleep 5
+
+          # Remove volumes safely
+          sudo docker volume rm my_stack_db_data 2>/dev/null || true
+          sudo docker volume rm compose_db_data 2>/dev/null || true
+          sudo docker volume rm db_data 2>/dev/null || true
+
+          # Create network if not exists
+          if ! sudo docker network inspect my_stack_app_net >/dev/null 2>&1; then
+            sudo docker network create --driver overlay my_stack_app_net
+          fi
+
+          # Deploy stack with --detach=false for better logging
+          sudo docker stack deploy -c docker-compose.yml --detach=false my_stack
+
