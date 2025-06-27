@@ -245,9 +245,9 @@ def log_action(user_id, description):
         conn.close()
 
 def is_password_pwned(password):
-    sha1 = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
-    prefix = sha1[:5]
-    suffix = sha1[5:]
+    sha256 = hashlib.sha256(password.encode('utf-8')).hexdigest().upper()
+    prefix = sha256[:5]
+    suffix = sha256[5:]
     url = f"https://api.pwnedpasswords.com/range/{prefix}"
     response = requests.get(url)
     if response.status_code != 200:
@@ -469,7 +469,7 @@ def test_db():
         conn.close()
         return f"Connected! Result: {result}"
     except Exception as e:
-        return f"Failed: {e}"
+        return "An internal error has occurred!"
 
 @app.route("/")
 def serve_index():
@@ -1287,7 +1287,7 @@ def edit_medical_record(record_id):
                 return render_template('doctor_editRecord.html', record=record)
         except ValueError:
             flash("Invalid date format.", "error")
-            return redirect(request.url)
+            return render_template('doctor_editRecord.html', record=record)
         
         diagnosis = encrypt_medical_records(record["patient_id"], diagnosis)
 
