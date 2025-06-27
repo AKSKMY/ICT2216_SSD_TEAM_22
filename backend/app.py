@@ -1221,6 +1221,8 @@ def edit_medical_record(record_id):
         except ValueError:
             flash("Invalid date format.", "error")
             return redirect(request.url)
+        
+        diagnosis = encrypt_medical_records(record["patient_id"], diagnosis)
 
         with conn.cursor() as cur:
             cur.execute("""
