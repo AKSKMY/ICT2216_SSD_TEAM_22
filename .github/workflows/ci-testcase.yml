@@ -10,6 +10,22 @@ jobs:
   flask-and-ui-test:
     runs-on: ubuntu-22.04
 
+    # ✅ Shared environment variables for all steps
+    env:
+      FLASK_SECRET_KEY: testsecret
+      MAIL_SERVER: smtp.test.com
+      MAIL_PORT: 587
+      MAIL_USE_TLS: true
+      MAIL_USERNAME: fake@example.com
+      MAIL_PASSWORD: dummy
+      MAIL_DEFAULT_SENDER: fake@example.com
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASSWORD: admin
+      DB_NAME: rbac
+      RECAPTCHA_SITE_KEY: test
+      RECAPTCHA_SECRET_KEY: test
+
     services:
       mysql:
         image: mysql:8.0
@@ -37,22 +53,22 @@ jobs:
           --network host \
           -v ${{ github.workspace }}/backend:/app \
           -w /app \
-          -e FLASK_SECRET_KEY=testsecret \
-          -e MAIL_SERVER=smtp.gmail.com \
-          -e MAIL_PORT=587 \
-          -e MAIL_USE_TLS=true \
-          -e MAIL_USERNAME=fake@example.com \
-          -e MAIL_PASSWORD=dummy \
-          -e MAIL_DEFAULT_SENDER=fake@example.com \
-          -e DB_HOST=127.0.0.1 \
-          -e DB_USER=root \
-          -e DB_PASSWORD=admin \
-          -e DB_NAME=rbac \
-          -e RECAPTCHA_SITE_KEY=test \
-          -e RECAPTCHA_SECRET_KEY=test \
+          -e FLASK_SECRET_KEY=$FLASK_SECRET_KEY \
+          -e MAIL_SERVER=$MAIL_SERVER \
+          -e MAIL_PORT=$MAIL_PORT \
+          -e MAIL_USE_TLS=$MAIL_USE_TLS \
+          -e MAIL_USERNAME=$MAIL_USERNAME \
+          -e MAIL_PASSWORD=$MAIL_PASSWORD \
+          -e MAIL_DEFAULT_SENDER=$MAIL_DEFAULT_SENDER \
+          -e DB_HOST=$DB_HOST \
+          -e DB_USER=$DB_USER \
+          -e DB_PASSWORD=$DB_PASSWORD \
+          -e DB_NAME=$DB_NAME \
+          -e RECAPTCHA_SITE_KEY=$RECAPTCHA_SITE_KEY \
+          -e RECAPTCHA_SECRET_KEY=$RECAPTCHA_SECRET_KEY \
           medivault-app \
           python app.py
-    
+
     - name: Wait for Flask app to boot
       run: sleep 10
 
@@ -62,13 +78,13 @@ jobs:
     - name: Test DB Connection
       run: curl --fail http://localhost:5000/test-db
 
-    - name: Install Chromium and test dependencies
+    - name: Install Chromium and Python dependencies
       run: |
         sudo apt update
         sudo apt install -y chromium-browser chromium-chromedriver
         pip install -r backend/requirements.txt
 
-    - name: Run unit tests for /register
+    - name: Run Register Unit Tests
       run: pytest backend/tests/test_register_unit.py --tb=short -v
 
     - name: Run Selenium UI test for /register
@@ -77,4 +93,3 @@ jobs:
     - name: Show Flask logs if tests fail
       if: failure()
       run: docker logs flask-app
-
