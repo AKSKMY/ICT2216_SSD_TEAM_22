@@ -7,7 +7,7 @@ import time
 from datetime import date
 
 # --- CONFIG ---
-URL = "http://localhost:5000/add_record?patient_id=1"
+URL = "http://localhost:5000/doctor/addRecord/1"
 CHROME_PATH = "/usr/bin/chromium-browser"  # adjust for local env
 
 # --- SETUP ---
