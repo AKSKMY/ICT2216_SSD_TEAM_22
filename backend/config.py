@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+from pathlib import Path
 
 def _get_env(name, default=None, required=False):
     """Helper to fetch env vars; fail if `required` and missing."""
@@ -17,6 +18,21 @@ def _get_secret(name, file_env):
     if path and os.path.isfile(path):
         return open(path, "r").read().strip()
     return None
+
+
+def secret(name: str, *, default: str = "") -> str:
+    """
+    Return the secret value for *name*.
+
+    1. If an env-var called  <NAME>_FILE  exists, read that file
+       and return its (trimmed) contents.
+    2. Otherwise fall back to the plain env-var  <NAME>.
+    3. If neither is present return *default*.
+    """
+    f = os.getenv(f"{name}_FILE")
+    if f and Path(f).is_file():
+        return Path(f).read_text(encoding="utf-8").strip()
+    return os.getenv(name, default)
 
 #! THIS FOR DEVELOPMENT MODE
 class BaseConfig:

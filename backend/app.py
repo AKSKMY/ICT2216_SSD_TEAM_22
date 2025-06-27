@@ -28,7 +28,7 @@ from flask_login import (
     LoginManager, UserMixin, login_user,
     logout_user, login_required, current_user
 )
-from config import DevelopmentConfig, ProductionConfig, TestingConfig
+from config import DevelopmentConfig, ProductionConfig, TestingConfig, secret
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -49,20 +49,6 @@ app = Flask(
 )
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
-
-def secret(name: str, *, default: str = "") -> str:
-    """
-    Return the secret value for *name*.
-
-    1. If an env-var called  <NAME>_FILE  exists, read that file
-       and return its (trimmed) contents.
-    2. Otherwise fall back to the plain env-var  <NAME>.
-    3. If neither is present return *default*.
-    """
-    f = os.getenv(f"{name}_FILE")
-    if f and Path(f).is_file():
-        return Path(f).read_text(encoding="utf-8").strip()
-    return os.getenv(name, default)
 
 # Default Limiter
 limiter = Limiter(
