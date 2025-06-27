@@ -9,7 +9,7 @@
     <p class="text-muted">Enter the 6-digit OTP sent to your email.</p>
 
     <!-- OTP Verification Form -->
-    <form method="POST" action="{{ url_for('verify_otp') }}">
+    <form method="POST" action="{{ url_for('auth.verify_otp') }}">
       <div class="mb-3">
         <label for="otp" class="form-label">One-Time Password</label>
         <input type="text" name="otp" id="otp" class="form-control" maxlength="6" required>
@@ -24,7 +24,7 @@
     </form>
 
     <!-- Hidden Form for Resend OTP -->
-    <form id="resendForm" method="POST" action="{{ url_for('resend_otp') }}" style="display:none;"></form>
+    <form id="resendForm" method="POST" action="{{ url_for('auth.resend_otp') }}" style="display:none;"></form>
   </div>
 </div>
 {% endblock %}

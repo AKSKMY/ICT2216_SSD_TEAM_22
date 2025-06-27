@@ -74,7 +74,7 @@ try:
     time.sleep(960)  # 31 minutes
 
     # Try accessing a protected route
-    driver.get("http://localhost:5000/dashboard")
+    driver.get("http://localhost:5000/auth/dashboard")
 
     # Check for login page redirect or session expired flash message
     if "login" in driver.current_url or "Session expired" in driver.page_source:
