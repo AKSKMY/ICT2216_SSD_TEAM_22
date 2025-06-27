@@ -15,7 +15,7 @@ import bcrypt
 import secrets
 from flask import (
     Flask, send_from_directory, render_template,
-    request, redirect, url_for, flash, session
+    request, redirect, url_for, flash, session, current_app, abort
 )
 from pathlib import Path
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -25,7 +25,7 @@ from flask_login import (
     LoginManager, UserMixin, login_user,
     logout_user, login_required, current_user
 )
-from config import DevelopmentConfig, ProductionConfig
+from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -72,8 +72,10 @@ limiter = Limiter(
 env = os.getenv("FLASK_ENV", "development").lower()
 if env == "production":
     app.config.from_object(ProductionConfig)
-else:
+elif env == "development":
     app.config.from_object(DevelopmentConfig)
+else:
+    app.config.from_object(TestingConfig)
 
 mail = Mail(app)
 
@@ -389,6 +391,70 @@ def view_table_data(table_name):
         print(f"❌ Error reading table `{table_name}`:", e)
     finally:
         cur.close()
+
+# ───────────────────────────────────────────────────────
+# TESTING ROUTES
+# ───────────────────────────────────────────────────────
+@app.route("/test-login-doctor")
+def test_login_doctor():
+    if not current_app.config.get("TESTING", False):
+        abort(404)
+
+    # Get doctor user "bob"
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT u.user_Id, u.username, r.role_name AS role, u.email
+            FROM user u
+            JOIN userrole ur ON u.user_Id = ur.user_Id
+            JOIN role r ON ur.role_Id = r.role_Id
+            WHERE u.username = 'bob' AND r.role_name = 'Doctor'
+            LIMIT 1
+        """)
+        user_row = cur.fetchone()
+    conn.close()
+
+    if not user_row:
+        return "No test doctor user found", 500
+
+    # Generate a secure session token
+    token = secrets.token_urlsafe(64)
+
+    # Set session values
+    session["session_token"] = token
+    session["last_active"] = datetime.utcnow().timestamp()
+    session.permanent = True
+
+    user = User(
+        user_Id=user_row["user_Id"],
+        username=user_row["username"],
+        role=user_row["role"]
+    )
+
+    login_user(user)
+
+    # Save session to DB
+    conn = get_db()
+    with conn.cursor() as cur:
+        session_lifetime_seconds = current_app.permanent_session_lifetime.total_seconds()
+        expiry_timestamp = datetime.utcnow().timestamp() + session_lifetime_seconds
+
+        cur.execute("""
+            INSERT INTO critical.user_sessions (session_token, user_id, ip_address, created_at, last_active, expires_at)
+            VALUES (%s, %s, %s, NOW(), NOW(), FROM_UNIXTIME(%s))
+        """, (
+            token,
+            user_row["user_Id"],
+            request.remote_addr,
+            expiry_timestamp
+        ))
+        conn.commit()
+    conn.close()
+
+    return redirect("/dashboard")
+
+
+
 # ───────────────────────────────────────────────────────
 # ROUTES
 # ───────────────────────────────────────────────────────
@@ -400,9 +466,9 @@ def test_db():
             cur.execute("SELECT 1")
             result = cur.fetchone()
         conn.close()
-        return f"MySQL connected! Result: {result}"
+        return f"Connected! Result: {result}"
     except Exception as e:
-        return f"MySQL connection failed: {e}"
+        return f"Failed: {e}"
 
 @app.route("/")
 def serve_index():
@@ -809,13 +875,13 @@ def edit_user(user_id):
             # Validate fields
             if not username or not email:
                 flash("Username and email are required.", "error")
-                return redirect(request.url)
+                return render_template("admin_editUsers.html", user=user, user_id=user_id)
 
             # Check email format with regex
-            email_regex = r"^[^@]+@[^@]+\.[^@]+$"
+            email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
             if not re.match(email_regex, email):
                 flash("Invalid email format.", "error")
-                return redirect(request.url)
+                return render_template("admin_editUsers.html", user=user, user_id=user_id)
     
             cur.execute("UPDATE user SET username = %s, email = %s WHERE user_Id = %s",
                         (username, email, user_id))
@@ -1141,17 +1207,17 @@ def add_medical_record(patient_id):
         # Basic input presence check
         if not diagnosis or not record_date:
             flash("All fields are required.", "error")
-            return redirect(request.url)
+            return render_template('doctor_addRecord.html', patient_id=patient_id)
 
         # Validate and sanitize date
         try:
             date_obj = datetime.strptime(record_date, "%Y-%m-%d").date()
             if date_obj > date.today():
                 flash("Date cannot be in the future.", "error")
-                return redirect(request.url)
+                return render_template('doctor_addRecord.html', patient_id=patient_id)
         except ValueError:
             flash("Invalid date format.", "error")
-            return redirect(request.url)
+            return render_template('doctor_addRecord.html', patient_id=patient_id)
 
         with conn.cursor() as cur:
             # Ensure patient exists
@@ -1209,7 +1275,7 @@ def edit_medical_record(record_id):
         # Basic required fields check
         if not diagnosis or not date_str:
             flash("All fields are required.", "error")
-            return redirect(request.url)
+            return render_template('doctor_editRecord.html', record=record)
 
         # Validate date format
         try:
@@ -1217,7 +1283,7 @@ def edit_medical_record(record_id):
             today = datetime.today().date()
             if record_date > today:
                 flash("Date cannot be in the future.", "error")
-                return redirect(request.url)
+                return render_template('doctor_editRecord.html', record=record)
         except ValueError:
             flash("Invalid date format.", "error")
             return redirect(request.url)
@@ -1265,25 +1331,25 @@ def add_patient():
         # Validate required fields
         if not user_id or not first_name or not last_name or not age or not dob:
             flash("User, First Name, Last Name, Age, and Date of Birth are required.", "error")
-            return redirect(request.url)
+            return render_template("doctor_addPatients.html", patient_users=patient_users)
 
         # Validate user_id is integer and exists in patient_users
         try:
             user_id_int = int(user_id)
         except ValueError:
             flash("Invalid user selection.", "error")
-            return redirect(request.url)
+            return render_template("doctor_addPatients.html", patient_users=patient_users)
 
         # Check if user_id is in patient_users list (to prevent tampering)
         if not any(u['user_Id'] == user_id_int for u in patient_users):
             flash("Selected user is invalid or already a patient.", "error")
-            return redirect(request.url)
+            return render_template("doctor_addPatients.html", patient_users=patient_users)
 
         # Validate gender
         valid_genders = {'Male', 'Female', 'Other'}
         if gender not in valid_genders:
             flash("Invalid gender selected.", "error")
-            return redirect(request.url)
+            return render_template("doctor_addPatients.html", patient_users=patient_users)
         gender = gender if gender else None
 
         # Validate date_of_birth
@@ -1293,10 +1359,10 @@ def add_patient():
                 today = datetime.today().date()
                 if dob_date > today:
                     flash("Date of birth cannot be in the future.", "error")
-                    return redirect(request.url)
+                    return render_template("doctor_addPatients.html", patient_users=patient_users)
             except ValueError:
                 flash("Invalid date of birth format.", "error")
-                return redirect(request.url)
+                return render_template("doctor_addPatients.html", patient_users=patient_users)
         else:
             dob_date = None
 

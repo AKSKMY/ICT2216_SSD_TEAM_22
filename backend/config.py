@@ -107,3 +107,8 @@ class ProductionConfig(BaseConfig):
     # --- Always off in prod ---------------------------------------------------
     DEBUG           = False
     SQLALCHEMY_ECHO = False
+
+class TestingConfig(BaseConfig):
+    TESTING = True
+    DEBUG = True
+    WTF_CSRF_ENABLED = False

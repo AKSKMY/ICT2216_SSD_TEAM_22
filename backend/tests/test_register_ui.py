@@ -8,6 +8,7 @@ import time
 
 # --- CONFIG ---
 URL = "http://localhost:5000/register"
+EXPECTED_REDIRECT = "http://localhost:5000/login"
 CHROME_PATH = "/usr/bin/chromium-browser"  # Update if needed
 
 # --- SETUP CHROME HEADLESS DRIVER ---
@@ -26,9 +27,9 @@ try:
     wait.until(EC.presence_of_element_located((By.ID, "username")))
 
     # Fill account credentials
-    driver.find_element(By.ID, "username").send_keys("seleniumtestuser")
-    driver.find_element(By.ID, "email").send_keys("selenium@example.com")
-    driver.find_element(By.ID, "password").send_keys("StrongPassword123")
+    driver.find_element(By.ID, "username").send_keys("TestUser")
+    driver.find_element(By.ID, "email").send_keys("selenium@gmail.com")
+    driver.find_element(By.ID, "password").send_keys("Strong@Password$456")
 
     # Fill personal info
     driver.find_element(By.ID, "first_name").send_keys("Selenium")
@@ -38,7 +39,8 @@ try:
     gender_dropdown.select_by_visible_text("Other")
 
     driver.find_element(By.ID, "age").send_keys("30")
-    driver.find_element(By.ID, "date_of_birth").send_keys("1995-05-10")
+    date_value = "1995-05-10"
+    driver.execute_script(f"document.getElementById('date_of_birth').value = '{date_value}'")
 
     # Submit form
     submit_button = driver.find_element(By.XPATH, '//button[@type="submit"]')
@@ -46,24 +48,25 @@ try:
     time.sleep(0.5)
     submit_button.click()
 
-    # Wait for redirect or flash message (up to 5 seconds)
+    # Wait for potential redirect
     time.sleep(2)
-    driver.save_screenshot("register_result.png")
 
-    # Check if redirected to login page
-    if "/login" in driver.current_url:
+    # ✅ Compare against expected URL
+    current_url = driver.current_url
+    print("🔗 Final URL:", current_url)
+
+    if current_url == EXPECTED_REDIRECT:
         print("✅ Registration test passed: Redirected to login page.")
     else:
-        # Check for error message
+        print("⚠️ Registration failed or did not redirect correctly.")
+        # Print any error messages
         errors = driver.find_elements(By.CLASS_NAME, "text-danger")
-        if errors:
-            print("⚠️ Registration failed with validation errors:")
-            for err in errors:
-                print(f" - {err.text}")
-        else:
-            print("⚠️ Registration did not redirect but no visible errors.")
+        for err in errors:
+            print(f" - {err.text}")
+
 except Exception as e:
     driver.save_screenshot("register_error.png")
     print(f"❌ Test exception: {e}")
+
 finally:
     driver.quit()
