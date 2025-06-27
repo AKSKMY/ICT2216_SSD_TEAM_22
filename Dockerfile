@@ -24,4 +24,4 @@ EXPOSE 5000
 ENV FLASK_ENV=production
 
 # 7) Launch Gunicorn, binding to 0.0.0.0:5000, serving "app:app"
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
