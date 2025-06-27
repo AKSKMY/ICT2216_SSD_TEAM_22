@@ -7,8 +7,9 @@ import time
 from datetime import date
 
 # --- CONFIG ---
-URL = "http://localhost:5000/doctor/addRecord/1"
-CHROME_PATH = "/usr/bin/chromium-browser"  # adjust for local env
+LOGIN_URL = "http://localhost:5000/test-login-doctor"  # ✅ test login route
+ADD_RECORD_URL = "http://localhost:5000/doctor/addRecord/1"
+CHROME_PATH = "/usr/bin/chromium-browser"  # adjust if needed
 
 # --- SETUP ---
 options = Options()
@@ -19,10 +20,15 @@ options.binary_location = CHROME_PATH
 driver = webdriver.Chrome(options=options)
 
 try:
-    driver.get(URL)
     wait = WebDriverWait(driver, 10)
 
-    # Wait for form to load
+    # ✅ 1. Login using test route
+    driver.get(LOGIN_URL)
+    wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))  # wait for page load
+    print("✅ Logged in via test-login-doctor")
+
+    # ✅ 2. Navigate to the addRecord page
+    driver.get(ADD_RECORD_URL)
     wait.until(EC.presence_of_element_located((By.ID, "diagnosis")))
 
     # Fill the form

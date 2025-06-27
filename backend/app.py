@@ -15,7 +15,7 @@ import bcrypt
 import secrets
 from flask import (
     Flask, send_from_directory, render_template,
-    request, redirect, url_for, flash, session
+    request, redirect, url_for, flash, session, current_app, abort
 )
 from pathlib import Path
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -25,7 +25,7 @@ from flask_login import (
     LoginManager, UserMixin, login_user,
     logout_user, login_required, current_user
 )
-from config import DevelopmentConfig, ProductionConfig
+from config import DevelopmentConfig, ProductionConfig, TestingConfig
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -72,8 +72,10 @@ limiter = Limiter(
 env = os.getenv("FLASK_ENV", "development").lower()
 if env == "production":
     app.config.from_object(ProductionConfig)
-else:
+elif env == "development":
     app.config.from_object(DevelopmentConfig)
+else:
+    app.config.from_object(TestingConfig)
 
 mail = Mail(app)
 
@@ -319,6 +321,20 @@ def view_table_data(table_name):
         print(f"❌ Error reading table `{table_name}`:", e)
     finally:
         cur.close()
+
+
+@app.route("/test-login-doctor")
+def test_login_doctor():
+    if not current_app.config.get("TESTING", False):
+        abort(404)
+
+    session["user_id"] = 1         # match test user in your DB
+    session["username"] = "DrTest" # arbitrary for template display
+    session["role"] = "Doctor"     # ensures access to doctor routes
+    session["_fresh"] = True       # tells Flask-Login session is authenticated
+    return redirect("/dashboard")
+
+
 # ───────────────────────────────────────────────────────
 # ROUTES
 # ───────────────────────────────────────────────────────

@@ -26,6 +26,11 @@ jobs:
       RECAPTCHA_SITE_KEY: test
       RECAPTCHA_SECRET_KEY: test
 
+      # ✅ Add these lines below to force test mode
+      FLASK_ENV: development
+      FLASK_CONFIG: testing
+      FLASK_APP: app.py
+
     services:
       mysql:
         image: mysql:8.0
