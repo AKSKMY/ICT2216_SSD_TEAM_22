@@ -104,7 +104,7 @@ jobs:
           -e RECAPTCHA_SITE_KEY=$RECAPTCHA_SITE_KEY \
           -e RECAPTCHA_SECRET_KEY=$RECAPTCHA_SECRET_KEY \
           medivault-app \
-          python app.py
+          python main.py
 
     - name: Wait for Flask app to boot
       run: sleep 10
