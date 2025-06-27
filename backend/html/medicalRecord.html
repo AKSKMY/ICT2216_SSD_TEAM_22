@@ -8,7 +8,7 @@
 
   {% if current_user.role == 'Doctor' %}
   <div class="mb-3">
-    <a href="{{ url_for('add_medical_record', patient_id=patient_id) }}" class="btn btn-success">
+    <a href="{{ url_for('doctor.add_medical_record', patient_id=patient_id) }}" class="btn btn-success">
       + Add Medical Record
     </a>
   </div>
@@ -38,7 +38,7 @@
         <td>{{ record.patient_first_name }} {{ record.patient_last_name }}</td>
         {% if current_user.role == 'Doctor' %}
         <td>
-          <a href="{{ url_for('edit_medical_record', record_id=record.record_id) }}" class="btn btn-sm btn-primary">
+          <a href="{{ url_for('doctor.edit_medical_record', record_id=record.record_id) }}" class="btn btn-sm btn-primary">
             Edit
           </a>
         </td>
