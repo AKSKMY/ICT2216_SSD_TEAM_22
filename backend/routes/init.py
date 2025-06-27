@@ -1,8 +1,8 @@
 # from .authorisation_route import auth_bp
-from .doctor_route import doctor_bp
-from .nurse_route import nurse_bp
-from .admin_route import adm_bp
-from .patient_route import patient_bp
+from routes.doctor_route import doctor_bp
+from routes.nurse_route import nurse_bp
+from routes.admin_route import adm_bp
+from routes.patient_route import patient_bp
 
 
 def register_blueprints(app):

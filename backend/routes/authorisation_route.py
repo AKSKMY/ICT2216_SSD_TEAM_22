@@ -4,7 +4,7 @@ import re
 import requests
 from dotenv import load_dotenv
 
-from backend.app import has_permission, get_db, is_password_pwned, secret, log_action
+from app import has_permission, get_db, is_password_pwned, secret, log_action
 
 load_dotenv()  # loads .env file automatically
 import pymysql

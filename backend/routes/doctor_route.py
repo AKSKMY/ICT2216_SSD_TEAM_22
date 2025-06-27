@@ -9,7 +9,7 @@ from flask_limiter.util import get_remote_address
 import re
 import pymysql
 
-from backend.function import has_permission, get_db, log_action
+from function import has_permission, get_db, log_action
 
 doctor_bp = Blueprint('doctor', __name__, url_prefix='/doctor')
 

@@ -6,7 +6,7 @@ from flask_login import (
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import re
-from backend.function import has_permission, get_db, decrypt_AES_cipher
+from function import has_permission, get_db, decrypt_AES_cipher
 from flask_mail import Mail, Message
 import pymysql
 

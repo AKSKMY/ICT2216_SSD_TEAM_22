@@ -2,7 +2,7 @@ import os
 import re
 from dotenv import load_dotenv
 
-from backend.function import is_password_pwned, create_encrypted_aes_key, log_action, has_permission
+from function import is_password_pwned, create_encrypted_aes_key, log_action, has_permission
 
 load_dotenv()  # loads .env file automatically
 import pymysql

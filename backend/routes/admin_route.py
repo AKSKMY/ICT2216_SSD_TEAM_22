@@ -1,7 +1,7 @@
 import re
 from dotenv import load_dotenv
 
-from backend.function import get_db, has_permission
+from function import get_db, has_permission
 
 load_dotenv()  # loads .env file automatically
 import pymysql
