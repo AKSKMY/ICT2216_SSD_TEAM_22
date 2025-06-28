@@ -9,7 +9,7 @@ from flask_limiter.util import get_remote_address
 import re
 import pymysql
 
-from function import has_permission, get_db, log_action
+from function import has_permission, get_db, log_action, sign_medical_record, encrypt_medical_records, decrypt_AES_cipher, verify_signature
 
 doctor_bp = Blueprint('doctor', __name__, url_prefix='/doctor')
 
@@ -57,7 +57,7 @@ def doctor_view_patient_records(patient_id):
     with conn.cursor(pymysql.cursors.DictCursor) as cur:
         cur.execute("""
             SELECT mr.record_id, mr.diagnosis, mr.date,
-                   mr.patient_id,
+                   mr.patient_id, mr.doctor_id, mr.digital_signature,
                    p.first_name AS patient_first_name, p.last_name AS patient_last_name,
                    d.first_name AS doctor_first_name, d.last_name AS doctor_last_name
             FROM rbac.medical_record mr
@@ -67,7 +67,29 @@ def doctor_view_patient_records(patient_id):
             ORDER BY mr.date DESC
         """, (patient_id, current_user.id))
         records = cur.fetchall()
-
+        for record in records:
+            try:
+                record["diagnosis"] = decrypt_AES_cipher(record["diagnosis"], patient_id, "Patient")
+                
+            except Exception as e:
+                record["diagnosis"] = "[Decryption failed]"
+                print(f"Decryption error for record {record['record_id']}: {e}")
+            date = record["date"]
+            if isinstance(date, datetime):
+                date_str = date.strftime('%Y-%m-%d')
+            elif isinstance(date, str):
+                date_str = date.split(" ")[0]  # Fallback for string from DB
+            else:
+                date_str = str(date)
+            print(f"is_valid values are: doctor_id: {record['doctor_id']}, diagnosis: {record['diagnosis']}, patient_id: {record['patient_id']}, date: {date_str}")
+            is_valid = verify_signature(
+                doctor_id=record["doctor_id"],
+                diagnosis=record["diagnosis"],
+                patient_id=record["patient_id"],
+                date=date_str,  # Make sure this matches format used when signing
+                b64_signature=record["digital_signature"]
+            )
+            record["verification_status"] = "✔️ Verified" if is_valid else "❌ Tampered"
     return render_template("medicalRecord.html", records=records, patient_id=patient_id)
 
 
@@ -107,17 +129,21 @@ def add_medical_record(patient_id):
             if not cur.fetchone():
                 flash("Patient not found.", "error")
                 return redirect(url_for("dashboard"))
-
+            
+            # Create digital signature
+            digital_signature = sign_medical_record(current_user.id, diagnosis, patient_id, date_obj)
+            encrypted_diagnosis = encrypt_medical_records(patient_id, diagnosis)
+            
             # Insert medical record
             cur.execute("""
-                INSERT INTO rbac.medical_record (patient_id, diagnosis, doctor_id, date)
-                VALUES (%s, %s, %s, %s)
-            """, (patient_id, diagnosis, current_user.id, date_obj))
+                INSERT INTO rbac.medical_record (patient_id, diagnosis, doctor_id, date, digital_signature)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (patient_id, encrypted_diagnosis, current_user.id, date_obj, digital_signature))
             conn.commit()
             log_action(current_user.id, f"Doctor added a medical record for patient ID {patient_id}.")
 
         flash("Medical record added successfully!", "success")
-        return redirect(url_for('view_patient_records', patient_id=patient_id))
+        return redirect(url_for('doctor.doctor_view_patient_records', patient_id=patient_id))
 
     return render_template('doctor_addRecord.html', patient_id=patient_id)
 
@@ -138,7 +164,11 @@ def edit_medical_record(record_id):
             WHERE record_id = %s AND doctor_id = %s
         """, (record_id, current_user.id))
         record = cur.fetchone()
-
+        try:
+            record["diagnosis"] = decrypt_AES_cipher(record["diagnosis"], record["patient_id"], "Patient")
+        except Exception as e:
+            record["diagnosis"] = "[Decryption failed]"
+            print(f"Decryption error for record {record['record_id']}: {e}")
     if not record:
         flash("Medical record not found or access denied.", "error")
         return redirect(url_for("dashboard"))
@@ -162,18 +192,21 @@ def edit_medical_record(record_id):
         except ValueError:
             flash("Invalid date format.", "error")
             return redirect(request.url)
-
+        print(f"patient_id is {record['patient_id']}, record_date is {record_date}")
+        digital_signature = sign_medical_record(current_user.id, diagnosis, record["patient_id"], record_date)
+        encrypted_diagnosis = encrypt_medical_records(record["patient_id"], diagnosis)
+            
         with conn.cursor() as cur:
             cur.execute("""
                 UPDATE rbac.medical_record
-                SET diagnosis = %s, date = %s
+                SET diagnosis = %s, date = %s, digital_signature = %s
                 WHERE record_id = %s AND doctor_id = %s
-            """, (diagnosis, date_str, record_id, current_user.id))
+            """, (encrypted_diagnosis, date_str, digital_signature, record_id, current_user.id))
             conn.commit()
             log_action(current_user.id, f"Doctor edited medical record ID {record_id}.")
 
         flash("Medical record updated successfully!", "success")
-        return redirect(url_for('view_patient_records', patient_id=record['patient_id']))
+        return redirect(url_for('doctor.doctor_view_patient_records', patient_id=record['patient_id']))
 
     return render_template('doctor_editRecord.html', record=record)
 
@@ -249,4 +282,4 @@ def add_patient():
         flash("Patient added successfully!", "success")
         return redirect(url_for('view_patients'))
 
-    return render_template("doctor_addPatients.html", patient_users=patient_users)
+    return render_template("addPatients.html", patient_users=patient_users)

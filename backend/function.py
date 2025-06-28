@@ -8,7 +8,6 @@ from datetime import datetime, date, timedelta
 import hashlib
 import random
 import requests
-
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import serialization, hashes
@@ -136,7 +135,8 @@ def create_encrypted_RSA_key():
         encoding=serialization.Encoding.DER,
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
-    public_key_b64 = base64.b64encode(public_bytes).decode('utf-8')
+    public_key_b64 = base64.b64encode(public_bytes).decode("utf-8")
+    print(f"Key to be stored is: {public_key_b64}")
     return encrypt_with_kek(private_bytes, 2), public_key_b64
 
 
@@ -236,15 +236,18 @@ def decrypt_admin_log(ciphertext):
     except Exception as e:
         return "❌ Error decrypting log"
     
-def sign_medical_record(doctor_id, diagnosis, patient_id, date):
+def sign_medical_record(doctor_id, diagnosis, patient_id, date: date):
     try:
         master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
         encrypted_kek = get_encrypted_kek_from_db(2)
         dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
         enc_private_key = get_encrypted_key(doctor_id, "Doctor")
-        private_key = decrypt_with_aes(enc_private_key, dec_kek)
-
-        to_sign = f"{diagnosis}|{patient_id}|{doctor_id}|{date}".encode("utf-8")
+        private_key_pem = decrypt_with_aes(enc_private_key, dec_kek)
+        private_key = serialization.load_pem_private_key(
+            private_key_pem,
+            password=None,
+        )
+        to_sign = f"{diagnosis}|{patient_id}|{doctor_id}|{date.strftime('%Y-%m-%d')}".encode("utf-8")
         signature = private_key.sign(
             to_sign,
             padding.PSS(
@@ -255,30 +258,42 @@ def sign_medical_record(doctor_id, diagnosis, patient_id, date):
         )
         return base64.b64encode(signature).decode("utf-8")
     except Exception as e:
+        print(f"Error {e}")
         return "❌ Error signing"
 
-def derive_public_key(doctor_id):
-    # Step 1: Load master key
-    master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
+def verify_signature(doctor_id, diagnosis, patient_id, date, b64_signature):
+    try:
+        # Step 1: Fetch public key from database
+        conn = get_db()
+        with conn.cursor(pymysql.cursors.DictCursor) as cur:
+            cur.execute("SELECT public_key FROM critical.doctor_pub_key WHERE doctor_id = %s", (doctor_id,))
+            result = cur.fetchone()
+            if not result:
+                print("❌ Public key not found")
+                return False
+            public_key_b64 = result['public_key']
 
-    # Step 2: Decrypt KEK (assume doctor kek_id is 2)
-    encrypted_kek = get_encrypted_kek_from_db(2)
-    dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
+        # Step 2: Load the public key
+        public_key_der = base64.b64decode(public_key_b64)
+        public_key = serialization.load_der_public_key(public_key_der)
 
-    # Step 3: Decrypt private RSA key
-    encrypted_priv_key = get_encrypted_key(doctor_id, "Doctor")
-    priv_key_bytes = decrypt_with_aes(encrypted_priv_key, dec_kek)
+        # Step 3: Rebuild the exact to_sign string
+        to_sign = f"{diagnosis}|{patient_id}|{doctor_id}|{date}".encode("utf-8")
 
-    # Step 4: Load private key object
-    private_key = serialization.load_pem_private_key(
-        priv_key_bytes,
-        password=None,
-    )
+        # Step 4: Decode the base64 signature
+        signature = base64.b64decode(b64_signature)
 
-    # Step 5: Extract public key in PEM format
-    public_key = private_key.public_key()
-    public_pem = public_key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
-    return base64.b64encode(public_pem).decode('utf-8')
+        # Step 5: Verify
+        public_key.verify(
+            signature,
+            to_sign,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        return True  # ✅ Signature is valid
+    except Exception as e:
+        print(f"❌ Signature verification failed: {e}")
+        return False

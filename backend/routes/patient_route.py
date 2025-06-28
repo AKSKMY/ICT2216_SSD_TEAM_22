@@ -6,7 +6,7 @@ from flask_login import (
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import re
-from function import has_permission, get_db, decrypt_AES_cipher
+from function import has_permission, get_db, decrypt_AES_cipher, verify_signature
 from flask_mail import Mail, Message
 import pymysql
 
@@ -34,7 +34,7 @@ def view_medicalRecords():
 
         # Fetch medical records for the patient
         cur.execute("""
-            SELECT mr.record_id, mr.diagnosis, mr.date,
+            SELECT mr.record_id, mr.diagnosis, mr.date, mr.doctor_id, mr.digital_signature,
                    d.first_name AS doctor_first_name, d.last_name AS doctor_last_name,
                    p.first_name AS patient_first_name, p.last_name AS patient_last_name
             FROM rbac.medical_record mr
@@ -50,4 +50,12 @@ def view_medicalRecords():
             except Exception as e:
                 record["diagnosis"] = "[Decryption failed]"
                 print(f"Decryption error for record {record['record_id']}: {e}")
+            is_valid = verify_signature(
+                doctor_id=record["doctor_id"],
+                diagnosis=record["diagnosis"],
+                patient_id=patient_id,
+                date=str(record["date"]),  # Make sure this matches format used when signing
+                b64_signature=record["digital_signature"]
+            )
+            record["verification_status"] = "✔️ Verified" if is_valid else "❌ Tampered"
     return render_template('medicalRecord.html', records=records)

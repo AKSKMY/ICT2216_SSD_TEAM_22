@@ -11,7 +11,7 @@ import pymysql
 
 nurse_bp = Blueprint('nurse', __name__, url_prefix='/nurse')
 
-
+from function import has_permission, get_db, decrypt_AES_cipher, verify_signature
 # Nurse - View patients
 @nurse_bp.route("/nurse/viewPatients", methods=["GET", "POST"])
 @login_required
@@ -55,7 +55,7 @@ def nurse_view_patient_records(patient_id):
     with conn.cursor(pymysql.cursors.DictCursor) as cur:
         cur.execute("""
             SELECT mr.record_id, mr.diagnosis, mr.date,
-                   mr.patient_id,
+                   mr.patient_id, mr.doctor_id, mr.digital_signature,
                    p.first_name AS patient_first_name, p.last_name AS patient_last_name,
                    d.first_name AS doctor_first_name, d.last_name AS doctor_last_name
             FROM rbac.medical_record mr
@@ -65,5 +65,18 @@ def nurse_view_patient_records(patient_id):
             ORDER BY mr.date DESC
         """, (patient_id,))
         records = cur.fetchall()
-
+        for record in records:
+            try:
+                record["diagnosis"] = decrypt_AES_cipher(record["diagnosis"], record["patient_id"], "Patient")
+            except Exception as e:
+                record["diagnosis"] = "[Decryption failed]"
+                print(f"Decryption error for record {record['record_id']}: {e}")
+            is_valid = verify_signature(
+                doctor_id=record["doctor_id"],
+                diagnosis=record["diagnosis"],
+                patient_id=record["patient_id"],
+                date=str(record["date"]),  # Make sure this matches format used when signing
+                b64_signature=record["digital_signature"]
+            )
+            record["verification_status"] = "✔️ Verified" if is_valid else "❌ Tampered"
     return render_template("medicalRecord.html", records=records, patient_id=patient_id)

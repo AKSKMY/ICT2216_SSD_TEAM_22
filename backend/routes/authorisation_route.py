@@ -16,7 +16,7 @@ from flask import (
     request, redirect, url_for, flash, session, current_app, abort, Blueprint
 )
 from pathlib import Path
-
+from function import create_encrypted_aes_key
 #from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import (
     LoginManager, UserMixin, login_user,
@@ -139,7 +139,8 @@ def register():
                     """,
                     (user_id, first_name, last_name, gender, date_of_birth_str, age)
                 )
-
+                encrypted_aes_key = create_encrypted_aes_key(1)
+                cur.execute("INSERT INTO critical.patient_encryption_key VALUES (%s, %s, %s)", (user_id, encrypted_aes_key, 1))
                 conn.commit()
                 flash("Registration successful. Please log in.", "success")
                 return redirect(url_for("auth.login"))

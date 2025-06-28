@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS `rbac`.`medical_record` (
   `diagnosis` VARCHAR(255) NULL DEFAULT NULL,
   `doctor_id` INT NULL DEFAULT NULL,
   `date` DATE NULL DEFAULT NULL,
-  `digital_signature` VARCHAR(255) NULL DEFAULT NULL,
+  `digital_signature` TEXT NULL DEFAULT NULL,
   PRIMARY KEY (`record_id`),
   CONSTRAINT `fk_doctor_Id`
     FOREIGN KEY (`doctor_id`)

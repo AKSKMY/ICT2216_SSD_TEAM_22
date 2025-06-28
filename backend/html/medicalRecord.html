@@ -36,6 +36,7 @@
         <td>{{ record.date }}</td>
         <td>{{ record.doctor_first_name }} {{ record.doctor_last_name }}</td>
         <td>{{ record.patient_first_name }} {{ record.patient_last_name }}</td>
+        <td>{{ record.verification_status }}</td>
         {% if current_user.role == 'Doctor' %}
         <td>
           <a href="{{ url_for('doctor.edit_medical_record', record_id=record.record_id) }}" class="btn btn-sm btn-primary">
