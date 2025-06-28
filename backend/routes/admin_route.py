@@ -1,7 +1,7 @@
 import re
 from dotenv import load_dotenv
 
-from function import get_db, has_permission
+from function import get_db, has_permission, decrypt_admin_log
 
 load_dotenv()  # loads .env file automatically
 import pymysql
@@ -241,5 +241,8 @@ def view_logs():
             ORDER BY al.timestamp DESC
         """)
         logs = cur.fetchall()
+    for log in logs:
+        log['action'] = decrypt_admin_log(log['action'])
 
+    
     return render_template("admin_viewLogs.html", logs=logs)

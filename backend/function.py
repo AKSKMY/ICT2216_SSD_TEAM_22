@@ -46,12 +46,15 @@ def has_permission(user_id, permission_name):
 
 def log_action(user_id, description):
     try:
+        # Encrypt the description with Admin KEK
+        encrypted_description = encrypt_with_kek(description.encode("utf-8"), 3)
+
         conn = get_db()
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO rbac.audit_log (user_Id, description)
                 VALUES (%s, %s)
-            """, (user_id, description))
+            """, (user_id, encrypted_description))
         conn.commit()
     except Exception as e:
         print("Audit log error:", e)
@@ -217,3 +220,12 @@ def view_table_data(table_name):
         print(f"❌ Error reading table `{table_name}`:", e)
     finally:
         cur.close()
+
+def decrypt_admin_log(ciphertext):
+    try:
+        master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
+        encrypted_kek = get_encrypted_kek_from_db(3)  # Admin KEK
+        dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
+        return decrypt_with_aes(ciphertext, dec_kek).decode("utf-8")
+    except Exception as e:
+        return "❌ Error decrypting log"
