@@ -1,9 +1,7 @@
 import re
 from dotenv import load_dotenv
 
-from function import get_db, has_permission, decrypt_admin_log
-
-load_dotenv()  # loads .env file automatically
+from function import get_db, has_permission, decrypt_admin_log, create_encrypted_RSA_key
 import pymysql
 from datetime import datetime, date, timedelta
 import bcrypt
@@ -207,11 +205,17 @@ def create_account():
                     cur.execute("""INSERT INTO rbac.doctor (user_Id, first_name, last_name, age, gender)
                                    VALUES (%s, %s, %s, %s, %s)""",
                                 (user_id, first_name, last_name, int(age), gender))
+                    encrypted_rsa_key, rsa_public_key = create_encrypted_RSA_key()
+                    cur.execute("""INSERT INTO critical.doctor_priv_key (doctor_id, private_enc_key, kek_id)
+                                    VALUES (%s, %s, %s)""", (user_id, encrypted_rsa_key, 2))
+                    cur.execute("""INSERT INTO critical.doctor_pub_key (doctor_id, public_key)
+                                    VALUES (%s, %s)""", (user_id, rsa_public_key))
+                    
                 elif role_name == "Nurse":
                     cur.execute("""INSERT INTO rbac.nurse (user_Id, first_name, last_name, age, gender)
                                    VALUES (%s, %s, %s, %s, %s)""",
                                 (user_id, first_name, last_name, int(age), gender))
-
+                    
                 conn.commit()
                 flash(f"{role_name} account created successfully!", "success")
         except Exception as e:
@@ -231,7 +235,7 @@ def view_logs():
     if current_user.role != 'Admin':
         flash("Access denied.", "error")
         return redirect(url_for("dashboard"))
-
+    
     conn = get_db()
     with conn.cursor(pymysql.cursors.DictCursor) as cur:
         cur.execute("""

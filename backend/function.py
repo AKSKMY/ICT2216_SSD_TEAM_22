@@ -10,8 +10,8 @@ import random
 import requests
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import serialization, hashes
 import base64
 from config import secret
 
@@ -126,12 +126,18 @@ def create_encrypted_aes_key(kek_id):
 # Create RSA key that is encrypted with appropriate KEK
 def create_encrypted_RSA_key():
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_key = private_key.public_key()
     private_bytes = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption()
     )
-    return encrypt_with_kek(private_bytes, 2)
+    public_bytes = public_key.public_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    public_key_b64 = base64.b64encode(public_bytes).decode('utf-8')
+    return encrypt_with_kek(private_bytes, 2), public_key_b64
 
 
 def get_encrypted_key(user_id, user_role):
@@ -229,3 +235,50 @@ def decrypt_admin_log(ciphertext):
         return decrypt_with_aes(ciphertext, dec_kek).decode("utf-8")
     except Exception as e:
         return "❌ Error decrypting log"
+    
+def sign_medical_record(doctor_id, diagnosis, patient_id, date):
+    try:
+        master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
+        encrypted_kek = get_encrypted_kek_from_db(2)
+        dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
+        enc_private_key = get_encrypted_key(doctor_id, "Doctor")
+        private_key = decrypt_with_aes(enc_private_key, dec_kek)
+
+        to_sign = f"{diagnosis}|{patient_id}|{doctor_id}|{date}".encode("utf-8")
+        signature = private_key.sign(
+            to_sign,
+            padding.PSS(
+                mgf = padding.MGF1(hashes.SHA256()),
+                salt_length = padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        return base64.b64encode(signature).decode("utf-8")
+    except Exception as e:
+        return "❌ Error signing"
+
+def derive_public_key(doctor_id):
+    # Step 1: Load master key
+    master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
+
+    # Step 2: Decrypt KEK (assume doctor kek_id is 2)
+    encrypted_kek = get_encrypted_kek_from_db(2)
+    dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
+
+    # Step 3: Decrypt private RSA key
+    encrypted_priv_key = get_encrypted_key(doctor_id, "Doctor")
+    priv_key_bytes = decrypt_with_aes(encrypted_priv_key, dec_kek)
+
+    # Step 4: Load private key object
+    private_key = serialization.load_pem_private_key(
+        priv_key_bytes,
+        password=None,
+    )
+
+    # Step 5: Extract public key in PEM format
+    public_key = private_key.public_key()
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+    return base64.b64encode(public_pem).decode('utf-8')

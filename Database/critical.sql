@@ -65,6 +65,24 @@ CREATE TABLE IF NOT EXISTS `critical`.`doctor_priv_key` (
   COLLATE = utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------------------
+-- Table `critical`.`doctor_pub_key`
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `critical`.`doctor_pub_key` ;
+
+CREATE TABLE IF NOT EXISTS `critical`.`doctor_pub_key` (
+  `doctor_id` INT NOT NULL,
+  `public_key` TEXT NOT NULL,
+  PRIMARY KEY (`doctor_id`),
+  CONSTRAINT `fk_doctor_pubkey_id`
+    FOREIGN KEY (`doctor_id`)
+    REFERENCES `rbac`.`doctor` (`user_Id`)  -- Adjust if your doctor ID is from elsewhere
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE = InnoDB
+  DEFAULT CHARACTER SET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+-- -----------------------------------------------------
 -- Table `critical`.`admin_encryption_key`
 -- -----------------------------------------------------
 DROP TABLE IF EXISTS `critical`.`admin_encryption_key` ;
