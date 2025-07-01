@@ -56,7 +56,7 @@ jobs:
           sudo docker stack rm my_stack                         # Remove the running stack
           sleep 10 
 
-          sudo docker volume rm my_stack_db_data compose_db_data db_data   # Remove DB volumes to clear existing data
+          sudo docker volume rm my_stack_db_data   # Remove DB volumes to clear existing data
           sleep 5
           
           sudo docker network rm my_stack_app_net               # Remove custom network (optional if recreated)
