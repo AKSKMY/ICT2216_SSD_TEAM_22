@@ -60,13 +60,13 @@ def edit_user(user_id):
             # Validate fields
             if not username or not email:
                 flash("Username and email are required.", "error")
-                return redirect(request.url)
+                return redirect(url_for("edit_user", user_id=user_id))
 
             # Check email format with regex
-            email_regex = r"^[^@]+@[^@]+\.[^@]+$"
+            email_regex = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
             if not re.match(email_regex, email):
                 flash("Invalid email format.", "error")
-                return redirect(request.url)
+                return redirect(url_for("edit_user", user_id=user_id))
 
             cur.execute("UPDATE user SET username = %s, email = %s WHERE user_Id = %s",
                         (username, email, user_id))
