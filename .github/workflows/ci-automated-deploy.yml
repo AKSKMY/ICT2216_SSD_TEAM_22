@@ -41,14 +41,28 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
-          cd project/compose
-          git pull
-          sudo docker build -t akskmy/ssd_flask_app:latest .
-          sudo docker push akskmy/ssd_flask_app:latest
-          sudo docker stop $(sudo docker ps -q)
-          sudo docker stack rm my_stack
-          sudo docker volume rm my_stack_db_data compose_db_data db_data
-          sudo docker network rm my_stack_app_net
-          sudo docker stack deploy -c docker-compose.yml my_stack
+          cd project/compose                  # Move to your project directory
+
+          git pull                            # Pull the latest code from your repo
+          sleep 2
+
+          sudo docker build -t akskmy/ssd_flask_app:latest .    # Rebuild your Flask app image
+          sudo docker push akskmy/ssd_flask_app:latest          # Push it to Docker Hub
+          sleep 5
+
+          sudo docker stop $(sudo docker ps -q)                 # Stop all running containers
+          sleep 5
+
+          sudo docker stack rm my_stack                         # Remove the running stack
+          sleep 10 
+
+          sudo docker volume rm my_stack_db_data compose_db_data db_data   # Remove DB volumes to clear existing data
+          sleep 5
+          
+          sudo docker network rm my_stack_app_net               # Remove custom network (optional if recreated)
+          sleep 5
+
+          sudo docker stack deploy -c docker-compose.yml my_stack   # Redeploy the stack
+          sleep 10
 
 
