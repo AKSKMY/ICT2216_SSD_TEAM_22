@@ -13,7 +13,7 @@ nurse_bp = Blueprint('nurse', __name__, url_prefix='/nurse')
 
 from function import has_permission, get_db, decrypt_AES_cipher, verify_signature
 # Nurse - View patients
-@nurse_bp.route("/nurse/viewPatients", methods=["GET", "POST"])
+@nurse_bp.route("/viewPatients", methods=["GET", "POST"])
 @login_required
 def nurse_view_patients():
     if current_user.role != 'Nurse' or not has_permission(current_user.id, "View Medical Records"):
@@ -44,7 +44,7 @@ def nurse_view_patients():
     return render_template("viewPatients.html", users=users, search_query=search_query)
 
 # Nurse - View patients
-@nurse_bp.route('/nurse/patientRecords/<int:patient_id>')
+@nurse_bp.route('/patientRecords/<int:patient_id>')
 @login_required
 def nurse_view_patient_records(patient_id):
     if current_user.role != 'Nurse' or not has_permission(current_user.id, "View Medical Records"):

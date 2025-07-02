@@ -19,10 +19,10 @@ from flask_login import (
 )
 
 
-adm_bp = Blueprint('adm', __name__, url_prefix='/adm')
+adm_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 
-@adm_bp.route("/admin/viewUsers")
+@adm_bp.route("/viewUsers")
 @login_required
 def view_users():
     if current_user.role != 'Admin':
@@ -44,7 +44,7 @@ def view_users():
     return render_template("admin_viewUsers.html", users=users)
 
 
-@adm_bp.route("/admin/editUser/<int:user_id>", methods=["GET", "POST"])
+@adm_bp.route("/editUser/<int:user_id>", methods=["GET", "POST"])
 @login_required
 def edit_user(user_id):
     if current_user.role != 'Admin' or not has_permission(current_user.id, "Manage Users"):
@@ -85,7 +85,7 @@ def edit_user(user_id):
     return render_template("admin_editUsers.html", user=user, user_id=user_id)
 
 
-@adm_bp.route("/admin/deleteUser/<int:user_id>", methods=["POST"])
+@adm_bp.route("/deleteUser/<int:user_id>", methods=["POST"])
 @login_required
 def delete_user(user_id):
     if current_user.role != 'Admin' or not has_permission(current_user.id, "Manage Users"):
@@ -109,7 +109,7 @@ def delete_user(user_id):
     return redirect(url_for("view_users"))
 
 
-@adm_bp.route("/admin/createAccount", methods=["GET", "POST"])
+@adm_bp.route("/createAccount", methods=["GET", "POST"])
 @login_required
 def create_account():
     if current_user.role != 'Admin' or not has_permission(current_user.id, "Manage Users"):

@@ -14,7 +14,7 @@ patient_bp = Blueprint('patient', __name__, url_prefix='/patient')
 
 
 # Patient - View Medical Records
-@patient_bp.route('/user/patientRecords')
+@patient_bp.route('/patientRecords')
 @login_required
 def view_medicalRecords():
     if current_user.role != 'Patient' or not has_permission(current_user.id, "View Medical Records"):

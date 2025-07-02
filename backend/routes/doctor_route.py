@@ -15,7 +15,7 @@ doctor_bp = Blueprint('doctor', __name__, url_prefix='/doctor')
 
 
 # Doctor - View patients
-@doctor_bp.route("/doctor/viewPatients", methods=["GET", "POST"])
+@doctor_bp.route("/viewPatients", methods=["GET", "POST"])
 @login_required
 def doctor_view_patients():
     if current_user.role != 'Doctor' or not has_permission(current_user.id, "View Medical Records"):
@@ -46,7 +46,7 @@ def doctor_view_patients():
     return render_template("viewPatients.html", users=users, search_query=search_query)
 
 # Doctor - View Medical records
-@doctor_bp.route('/doctor/patientRecords/<int:patient_id>')
+@doctor_bp.route('/patientRecords/<int:patient_id>')
 @login_required
 def doctor_view_patient_records(patient_id):
     if current_user.role != 'Doctor' or not has_permission(current_user.id, "View Medical Records"):
@@ -94,7 +94,7 @@ def doctor_view_patient_records(patient_id):
 
 
 # Doctor - Add Medical Records
-@doctor_bp.route('/doctor/addRecord/<int:patient_id>', methods=['GET', 'POST'])
+@doctor_bp.route('/addRecord/<int:patient_id>', methods=['GET', 'POST'])
 @login_required
 def add_medical_record(patient_id):
     if current_user.role != 'Doctor' or not has_permission(current_user.id, "Edit Medical Records"):
@@ -147,7 +147,7 @@ def add_medical_record(patient_id):
     return render_template('doctor_addRecord.html', patient_id=patient_id)
 
 # Doctor - Edit Medical records
-@doctor_bp.route('/doctor/editRecord/<int:record_id>', methods=['GET', 'POST'])
+@doctor_bp.route('/editRecord/<int:record_id>', methods=['GET', 'POST'])
 @login_required
 def edit_medical_record(record_id):
     if current_user.role != 'Doctor' or not has_permission(current_user.id, "Edit Medical Records"):

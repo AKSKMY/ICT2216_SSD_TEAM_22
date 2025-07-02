@@ -7,8 +7,8 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 
 # --- CONFIG ---
-URL = "http://localhost:5000/register"
-EXPECTED_REDIRECT = "http://localhost:5000/login"
+URL = "http://localhost:5000/auth/register"
+EXPECTED_REDIRECT = "http://localhost:5000/auth/login"
 CHROME_PATH = "/usr/bin/chromium-browser"  # Update if needed
 
 # --- SETUP CHROME HEADLESS DRIVER ---

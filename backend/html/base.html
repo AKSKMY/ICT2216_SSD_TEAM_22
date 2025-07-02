@@ -26,9 +26,9 @@
         {% if current_user.is_authenticated %}
           <div class="d-flex align-items-center">
             {% if current_user.role == 'Admin' %}
-              <a href="{{ url_for('adm.view_logs') }}" class="nav-underline me-3">View Audit Logs</a>
-              <a href="{{ url_for('adm.create_account') }}" class="nav-underline me-3">Create Staff Account</a>
-              <a href="{{ url_for('adm.view_users') }}" class="nav-underline me-3">Manage Users</a>
+              <a href="{{ url_for('admin.view_logs') }}" class="nav-underline me-3">View Audit Logs</a>
+              <a href="{{ url_for('admin.create_account') }}" class="nav-underline me-3">Create Staff Account</a>
+              <a href="{{ url_for('admin.view_users') }}" class="nav-underline me-3">Manage Users</a>
 
             {% elif current_user.role == 'Doctor' %}
               <a href="{{ url_for('doctor.doctor_view_patients') }}" class="nav-underline me-3">View All Patients</a>
