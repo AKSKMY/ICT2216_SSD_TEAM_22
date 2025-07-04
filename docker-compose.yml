@@ -13,10 +13,8 @@ services:
       - app_net
 
     environment:
-      #! TO CHANGE ROOT PASSWORD UPON FINALISING
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
       MYSQL_DATABASE: rbac
-      #! NORMAL USER CREDENTIALS
       MYSQL_USER: appuser
       MYSQL_PASSWORD_FILE: /run/secrets/mysql_app_password
       
