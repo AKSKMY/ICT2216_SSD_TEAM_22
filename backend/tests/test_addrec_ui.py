@@ -54,7 +54,6 @@ try:
 
     # ✅ 5. Check final URL
     final_url = driver.current_url
-    print("🔗 Final URL:", final_url)
 
     if final_url == EXPECTED_REDIRECT:
         print("✅ Add Record test passed: Redirected to expected patient records page.")

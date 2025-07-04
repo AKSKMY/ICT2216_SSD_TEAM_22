@@ -52,7 +52,6 @@ try:
 
     # ✅ Compare against expected URL
     current_url = driver.current_url
-    print("🔗 Final URL:", current_url)
 
     if current_url == EXPECTED_REDIRECT:
         print("✅ Registration test passed: Redirected to login page.")

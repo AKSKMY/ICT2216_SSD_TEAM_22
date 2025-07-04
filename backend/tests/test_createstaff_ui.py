@@ -8,7 +8,7 @@ import uuid
 
 # --- CONFIG ---
 LOGIN_URL = "http://localhost:5000/test-login-admin"
-CREATE_URL = "http://localhost:5000/createAccount"
+CREATE_URL = "http://localhost:5000/doctor/createAccount"
 LOGOUT_URL = "http://localhost:5000/auth/logout"
 CHROME_PATH = "/usr/bin/chromium-browser"
 
