@@ -9,6 +9,7 @@ import uuid
 # --- CONFIG ---
 LOGIN_URL = "http://localhost:5000/test-login-admin"
 CREATE_URL = "http://localhost:5000/createAccount"
+LOGOUT_URL = "http://localhost:5000/auth/logout"
 CHROME_PATH = "/usr/bin/chromium-browser"
 
 # Generate a unique username and email each run to avoid duplicate user error
@@ -59,13 +60,23 @@ try:
     success_found = False
     for alert in alerts:
         print("🔔 Flash message:", alert.text)
-        if "account created successfully" in alert.text:
+        if "account created successfully" in alert.text.lower():
             success_found = True
 
     if success_found:
         print("✅ Admin staff creation test passed.")
     else:
         print("❌ Flash message did not confirm successful account creation.")
+
+    # ✅ 5. Logout after test
+    print("🚪 Logging out...")
+    driver.get(LOGOUT_URL)
+
+    # Confirm logout success
+    if "login" in driver.current_url or "logged out" in driver.page_source.lower():
+        print("✅ Successfully logged out after test.")
+    else:
+        print("⚠️ Could not confirm logout.")
 
 except Exception as e:
     print("❌ Exception during test:", e)

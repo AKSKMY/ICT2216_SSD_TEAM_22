@@ -38,7 +38,6 @@ try:
     gender_dropdown = Select(driver.find_element(By.ID, "gender"))
     gender_dropdown.select_by_visible_text("Other")
 
-    driver.find_element(By.ID, "age").send_keys("30")
     date_value = "1995-05-10"
     driver.execute_script(f"document.getElementById('date_of_birth').value = '{date_value}'")
 

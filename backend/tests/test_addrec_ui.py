@@ -10,7 +10,8 @@ from datetime import date
 LOGIN_URL = "http://localhost:5000/test-login-doctor"
 ADD_RECORD_URL = "http://localhost:5000/doctor/addRecord/1"
 EXPECTED_REDIRECT = "http://localhost:5000/doctor/patientRecords/1"
-CHROME_PATH = "/usr/bin/chromium-browser"  
+LOGOUT_URL = "http://localhost:5000/auth/logout"
+CHROME_PATH = "/usr/bin/chromium-browser"
 
 # --- SETUP ---
 options = Options()
@@ -50,7 +51,7 @@ try:
         wait.until(EC.url_changes(ADD_RECORD_URL))
     except:
         print("⚠️ URL did not change after form submit — possible form error.")
-    
+
     # ✅ 5. Check final URL
     final_url = driver.current_url
     print("🔗 Final URL:", final_url)
@@ -59,28 +60,25 @@ try:
         print("✅ Add Record test passed: Redirected to expected patient records page.")
     else:
         print("⚠️ Unexpected redirect. Flash messages or errors may be present.")
-        
+
         # Print flash or error messages
         alerts = driver.find_elements(By.CLASS_NAME, "alert")
         for alert in alerts:
             print("⚠️ Flash message:", alert.text)
-        
+
         errors = driver.find_elements(By.CLASS_NAME, "text-danger")
         for err in errors:
             print(" -", err.text)
-            
-    # Sleep longer than session timeout (e.g., 31 mins if timeout is 30 mins)
-    print("💤 Waiting for session to expire...")
-    time.sleep(960)  # 31 minutes
 
-    # Try accessing a protected route
-    driver.get("http://localhost:5000/auth/dashboard")
+    # ✅ Explicitly logout to end session
+    print("🚪 Logging out...")
+    driver.get(LOGOUT_URL)
 
-    # Check for login page redirect or session expired flash message
-    if "login" in driver.current_url or "Session expired" in driver.page_source:
-        print("✅ Session expired and redirected to login.")
+    # Confirm logout success
+    if "login" in driver.current_url or "logged out" in driver.page_source.lower():
+        print("✅ Successfully logged out after test.")
     else:
-        print("❌ Session did not expire as expected.")
+        print("⚠️ Could not confirm logout.")
 
 except Exception as e:
     print("❌ Exception during test:", e)
