@@ -127,6 +127,9 @@ jobs:
     - name: Run 'Add Record' Testcase
       run: python backend/tests/test_addrec_ui.py
 
+    - name: Run 'Create Staff Account' Testcase
+      run: python backend/tests/test_createstaff_ui.py
+
     - name: Flask Logs
       if: always()
       run: docker logs flask-app

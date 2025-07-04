@@ -263,6 +263,64 @@ def test_login_doctor():
 
     return redirect(url_for("auth.dashboard"))
 
+@app.route("/test-login-admin")
+def test_login_admin():
+    if not current_app.config.get("TESTING", False):
+        abort(404)
+
+    # Get admin user "david"
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT u.user_Id, u.username, r.role_name AS role, u.email
+            FROM user u
+            JOIN userrole ur ON u.user_Id = ur.user_Id
+            JOIN role r ON ur.role_Id = r.role_Id
+            WHERE u.username = 'david' AND r.role_name = 'Admin'
+            LIMIT 1
+        """)
+        user_row = cur.fetchone()
+    conn.close()
+
+    if not user_row:
+        return "No test admin user found", 500
+
+    # Generate a secure session token
+    token = secrets.token_urlsafe(64)
+
+    # Set session values
+    session["session_token"] = token
+    session["last_active"] = datetime.utcnow().timestamp()
+    session.permanent = True
+
+    user = User(
+        user_Id=user_row["user_Id"],
+        username=user_row["username"],
+        role=user_row["role"]
+    )
+
+    login_user(user)
+
+    # Save session to DB
+    conn = get_db()
+    with conn.cursor() as cur:
+        session_lifetime_seconds = current_app.permanent_session_lifetime.total_seconds()
+        expiry_timestamp = datetime.utcnow().timestamp() + session_lifetime_seconds
+
+        cur.execute("""
+            INSERT INTO critical.user_sessions (session_token, user_id, ip_address, created_at, last_active, expires_at)
+            VALUES (%s, %s, %s, NOW(), NOW(), FROM_UNIXTIME(%s))
+        """, (
+            token,
+            user_row["user_Id"],
+            request.remote_addr,
+            expiry_timestamp
+        ))
+        conn.commit()
+    conn.close()
+
+    return redirect(url_for("auth.dashboard"))
+
 
 
 # ───────────────────────────────────────────────────────
