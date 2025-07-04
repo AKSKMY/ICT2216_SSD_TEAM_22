@@ -191,7 +191,8 @@ def edit_medical_record(record_id):
         except ValueError:
             flash("Invalid date format.", "error")
             return redirect(url_for('edit_medical_record', record_id=record_id))
-
+        digital_signature = sign_medical_record(current_user.id, diagnosis, record["patient_id"], record_date)
+        encrypted_diagnosis = encrypt_medical_records(record["patient_id"], diagnosis)
         with conn.cursor() as cur:
             cur.execute("""
                 UPDATE rbac.medical_record

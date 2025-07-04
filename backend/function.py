@@ -46,7 +46,7 @@ def has_permission(user_id, permission_name):
 def log_action(user_id, description):
     try:
         # Encrypt the description with Admin KEK
-        encrypted_description = encrypt_with_kek(description.encode("utf-8"), 3)
+        encrypted_description = encrypt_admin_log(description)
 
         conn = get_db()
         with conn.cursor() as cur:
@@ -158,7 +158,7 @@ def get_encrypted_key(user_id, user_role):
                 raise ValueError(f"KEK with id {user_id} not found in the database.")
             return result['patient_AES_key']  # the base64 string
         elif (user_role == "Admin"):
-            cursor.execute("SELECT admin_AES_key FROM critical.admin_encryption_key WHERE id = %s", (user_id,))
+            cursor.execute("SELECT admin_AES_key FROM critical.admin_encryption_key WHERE admin_id = %s", (user_id,))
             result = cursor.fetchone()
             if result is None:
                 raise ValueError(f"KEK with id {user_id} not found in the database.")
@@ -227,12 +227,25 @@ def view_table_data(table_name):
     finally:
         cur.close()
 
+def encrypt_admin_log(plaintext):
+    try:
+        master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
+        encrypted_kek = get_encrypted_kek_from_db(3)  # Admin KEK
+        dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
+        encrypted_admin_AES_key_b64 = get_encrypted_key(4,"Admin")
+        admin_AES_key = decrypt_with_aes(encrypted_admin_AES_key_b64, dec_kek)
+        return encrypt_with_aes_key(admin_AES_key, plaintext)
+    except Exception as e:
+        return "❌ Error encrypting log"
+
 def decrypt_admin_log(ciphertext):
     try:
         master_key = base64.b64decode(secret('KEK_MASTER_KEY'))
         encrypted_kek = get_encrypted_kek_from_db(3)  # Admin KEK
         dec_kek = decrypt_with_master_key(encrypted_kek, master_key)
-        return decrypt_with_aes(ciphertext, dec_kek).decode("utf-8")
+        encrypted_admin_AES_key_b64 = get_encrypted_key(4,"Admin")
+        admin_AES_key = decrypt_with_aes(encrypted_admin_AES_key_b64, dec_kek)
+        return decrypt_with_aes(ciphertext, admin_AES_key).decode("utf-8")
     except Exception as e:
         return "❌ Error decrypting log"
     
