@@ -49,8 +49,6 @@ app = Flask(
 )
 csrf = CSRFProtect(app)
 
-csrf = CSRFProtect(app)
-
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 app.config['SESSION_COOKIE_SECURE'] = True          # Send cookie only over HTTPS
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
