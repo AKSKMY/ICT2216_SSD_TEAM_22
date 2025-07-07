@@ -47,9 +47,11 @@ app = Flask(
     static_folder=static_folder,
     static_url_path="/static"
 )
+csrf = CSRFProtect(app)
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
-
+app.config['SESSION_COOKIE_SECURE'] = True          # Send cookie only over HTTPS
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # Default Limiter
 limiter = Limiter(
     get_remote_address,

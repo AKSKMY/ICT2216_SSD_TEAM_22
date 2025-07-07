@@ -226,8 +226,11 @@ def login():
                 flash("Failed to send OTP. Please try again.", "error")
                 return render_template("login.html")
             return redirect(url_for("auth.verify_otp"))
-        else:
+        elif row:
             log_action(row["user_Id"], f"Login attempt from IP {ip} for username '{username}'")
+            flash("Invalid username or password.", "error")
+        else:
+            log_action(0, f"Login attempt from IP {ip} for username '{username}'")
             flash("Invalid username or password.", "error")
 
     return render_template("login.html", site_key=site_key)

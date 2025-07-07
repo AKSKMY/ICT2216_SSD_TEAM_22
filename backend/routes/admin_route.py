@@ -95,6 +95,11 @@ def delete_user(user_id):
     conn = get_db()
     try:
         with conn.cursor() as cur:
+            cur.execute("DELETE FROM rbac.doctor WHERE user_Id = %s", (user_id,))
+            cur.execute("DELETE FROM rbac.nurse WHERE user_Id = %s", (user_id,))
+            cur.execute("DELETE FROM rbac.patient WHERE user_Id = %s", (user_id,))
+            cur.execute("DELETE FROM critical.doctor_priv_key WHERE doctor_id = %s", (user_id,))
+            cur.execute("DELETE FROM critical.doctor_pub_key WHERE doctor_id = %s", (user_id,))
             cur.execute("DELETE FROM userrole WHERE user_Id = %s", (user_id,))
             cur.execute("DELETE FROM user WHERE user_Id = %s", (user_id,))
         conn.commit()
@@ -106,7 +111,7 @@ def delete_user(user_id):
     finally:
         conn.close()
 
-    return redirect(url_for("view_users"))
+    return redirect(url_for("admin.view_users"))
 
 
 @adm_bp.route("/createAccount", methods=["GET", "POST"])

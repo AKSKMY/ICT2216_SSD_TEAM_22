@@ -27,6 +27,7 @@
               <td>
                 <a href="{{ url_for('admin.edit_user', user_id=user.user_Id) }}" class="btn btn-sm btn-warning me-2">Edit</a>
                 <form action="{{ url_for('admin.delete_user', user_id=user.user_Id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                 </form>
               </td>
