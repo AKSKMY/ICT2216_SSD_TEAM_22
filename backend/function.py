@@ -50,11 +50,6 @@ def log_action(user_id, description):
 
         conn = get_db()
         with conn.cursor() as cur:
-            if user_id is None:
-                cur.execute("""
-                    INSERT INTO rbac.audit_log (user_Id, description)
-                    VALUES (%s, %s)
-                """, (0, encrypted_description))
             cur.execute("""
                 INSERT INTO rbac.audit_log (user_Id, description)
                 VALUES (%s, %s)
