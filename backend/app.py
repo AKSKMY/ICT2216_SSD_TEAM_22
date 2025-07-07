@@ -48,6 +48,8 @@ app = Flask(
     static_url_path="/static"
 )
 
+csrf = CSRFProtect(app)
+
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 # Default Limiter
