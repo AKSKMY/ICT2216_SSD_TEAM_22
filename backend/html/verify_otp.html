@@ -10,6 +10,7 @@
 
     <!-- OTP Verification Form -->
     <form method="POST" action="{{ url_for('auth.verify_otp') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="mb-3">
         <label for="otp" class="form-label">One-Time Password</label>
         <input type="text" name="otp" id="otp" class="form-control" maxlength="6" required>
@@ -24,7 +25,9 @@
     </form>
 
     <!-- Hidden Form for Resend OTP -->
-    <form id="resendForm" method="POST" action="{{ url_for('auth.resend_otp') }}" style="display:none;"></form>
+    <form id="resendForm" method="POST" action="{{ url_for('auth.resend_otp') }}" style="display:none;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    </form>
   </div>
 </div>
 {% endblock %}
