@@ -38,7 +38,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: admin
+          MYSQL_ROOT_PASSWORD: ${{secrets.DB_PASSWORD}}
           MYSQL_DATABASE: rbac
         ports:
           - 3306:3306
@@ -55,7 +55,7 @@ jobs:
     - name: Wait for MySQL to be ready
       run: |
         for i in {1..10}; do
-          if mysqladmin ping -h 127.0.0.1 --user=root --password=admin --silent; then
+          if mysqladmin ping -h 127.0.0.1 --user=root --password=${{secrets.DB_PASSWORD}} --silent; then
             echo "MySQL is ready!"
             break
           fi
@@ -65,19 +65,19 @@ jobs:
 
     - name: Run schema_script.sql
       run: |
-        mysql -h 127.0.0.1 -u root -padmin rbac < Database/schema_script.sql
+        mysql -h 127.0.0.1 -u root -p ${{secrets.DB_PASSWORD}} rbac < Database/schema_script.sql
 
     - name: Run critical.sql
       run: |
-        mysql -h 127.0.0.1 -u root -padmin rbac < Database/critical.sql
+        mysql -h 127.0.0.1 -u root -p ${{secrets.DB_PASSWORD}} rbac < Database/critical.sql
 
     - name: Run data_population.sql
       run: |
-        mysql -h 127.0.0.1 -u root -padmin rbac < Database/data_population.sql
+        mysql -h 127.0.0.1 -u root -p ${{secrets.DB_PASSWORD}} rbac < Database/data_population.sql
 
     - name: Check DB Content (optional debug)
       run: |
-        mysql -h 127.0.0.1 -u root -padmin -e "USE rbac; SELECT COUNT(*) FROM user;"
+        mysql -h 127.0.0.1 -u root -p ${{secrets.DB_PASSWORD}} -e "USE rbac; SELECT COUNT(*) FROM user;"
 
     - name: Build Docker image for Flask
       run: docker build -t medivault-app .
